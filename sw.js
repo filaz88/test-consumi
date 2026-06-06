@@ -1,10 +1,11 @@
-const CACHE_NAME = 'simulatore-v1';
+const CACHE_NAME = 'ugo-isotta-v2';
 const ASSETS = [
-  './simulazione-tesla-vs-chr.html',
-  './manifest.json'
+  './simulatore-ev-google.html',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
-// Install: cache all assets
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -13,7 +14,6 @@ self.addEventListener('install', event => {
   );
 });
 
-// Activate: remove old caches
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
@@ -25,11 +25,10 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Fetch: cache-first, fallback to network
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
       .then(cached => cached || fetch(event.request))
-      .catch(() => caches.match('./simulazione-tesla-vs-chr.html'))
+      .catch(() => caches.match('./simulatore-ev-google.html'))
   );
 });
