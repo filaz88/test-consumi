@@ -259,11 +259,6 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
     </div>
   </div>
 
-  <!-- MAP -->
-  <div class="card" style="padding:0.8rem">
-    <div id="map"></div>
-  </div>
-
   <!-- PARAMETRI AUTO -->
   <div class="card">
     <p class="card-title">🚗 Parametri auto</p>
@@ -296,6 +291,11 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
       </div>
       <input class="ev-range" id="sl-kwh" type="range" min="0.15" max="0.80" step="0.01" value="0.50">
     </div>
+  </div>
+
+  <!-- MAP -->
+  <div class="card" style="padding:0.8rem">
+    <div id="map"></div>
   </div>
 
   <!-- PEDAGGI -->
@@ -344,7 +344,7 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
     <div class="note">
       <strong>Fonte dati:</strong> Percorso via OSRM (Open Source Routing Machine, gratuito).
       Mappa OpenStreetMap. Supercharger Tesla: rete europea live da supercharge.info.
-      Pedaggi stimati sui km autostradali rilevati automaticamente dal percorso.
+      Costi viaggio: pedaggi (stimati sui km autostradali rilevati dal percorso) + soste Supercharger (se necessarie). Il costo di ricarica domestica pre-viaggio non è incluso.
       Costo Supercharger: tariffa media Tesla Europa ~€0,62/kWh. Dati indicativi.
     </div>
   </div>
@@ -792,29 +792,45 @@ document.getElementById('btn-calc').addEventListener('click', async () => {
       <div class="soc-bar-track"><div class="soc-bar-fill" style="width:${Math.min(socAtDest,100)}%;background:${socColor}"></div></div>
       <div class="soc-labels"><span>0%</span><span style="color:var(--warn)">Min ${socMin}%</span><span>100%</span></div>`;
 
-    let costHTML = `
-      <div class="cost-row">
-        <span class="cost-label">⚡ Energia (${totalKwh.toFixed(1)} kWh × €${kwh.toFixed(2).replace('.',',')})</span>
-        <span class="cost-val c-energy">${fmtE(energyCost)}</span>
+    // Costi viaggio: solo pedaggi + soste Supercharger
+    // L'energia domestica (pre-viaggio) non è un costo del viaggio
+    const tripCost = tollCost + stopCost;
+
+    let costHTML = '';
+
+    // Info consumi (non è un costo, è un dato tecnico)
+    costHTML += `
+      <div class="cost-row" style="background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.1)">
+        <span class="cost-label" style="color:var(--muted)">⚡ Consumo stimato</span>
+        <span class="cost-val" style="color:var(--muted)">${totalKwh.toFixed(1)} kWh (${cons} kWh/100km)</span>
       </div>`;
+
     if (hwKm > 0) costHTML += `
       <div class="cost-row">
         <span class="cost-label">🛣️ Pedaggi (${hwKm} km autostrada · ${Math.round(hwKm/distKm*100)}%)</span>
         <span class="cost-val c-toll">${fmtE(tollCost)}</span>
       </div>`;
+
     if (stops.length) costHTML += `
       <div class="cost-row">
         <span class="cost-label">🔴 Supercharger (${stops.length} sosta${stops.length>1?'e':''} · €0,62/kWh)</span>
         <span class="cost-val" style="color:var(--tesla)">${fmtE(stopCost)}</span>
       </div>`;
+
+    if (!hwKm && !stops.length) costHTML += `
+      <div class="cost-row">
+        <span class="cost-label" style="color:var(--muted)">Nessun costo aggiuntivo stimato</span>
+        <span class="cost-val c-energy">€ 0,00</span>
+      </div>`;
+
     costHTML += `
       <div class="cost-row total-row">
-        <span class="cost-label"><strong>Totale viaggio</strong></span>
-        <span class="cost-val c-total">${fmtE(totalCost)}</span>
+        <span class="cost-label"><strong>Totale costi viaggio</strong></span>
+        <span class="cost-val c-total">${fmtE(tripCost)}</span>
       </div>
       <div class="cost-row">
         <span class="cost-label">Costo per km</span>
-        <span class="cost-val c-energy">${distKm>0?fmtE(totalCost/distKm):'—'}/km</span>
+        <span class="cost-val c-energy">${distKm>0?fmtE(tripCost/distKm):'—'}/km</span>
       </div>`;
     document.getElementById('cost-rows').innerHTML = costHTML;
 
