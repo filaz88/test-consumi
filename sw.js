@@ -1,9 +1,10 @@
-const CACHE_NAME = 'ugo-isotta-v4';
+const CACHE_NAME = 'ugo-isotta-v5';
 const ASSETS = [
   './simulatore-ev-google.html',
   './manifest.json',
-  './icon-192.png',
-  './icon-512.png'
+  './apple-touch-icon.png',
+  './icon-dogs-192.png',
+  './icon-dogs-512.png'
 ];
 
 self.addEventListener('install', event => {
@@ -17,7 +18,7 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.map(k => caches.delete(k))) // elimina TUTTE le cache vecchie
+      Promise.all(keys.map(k => caches.delete(k)))
     ).then(() => self.clients.claim())
   );
 });
