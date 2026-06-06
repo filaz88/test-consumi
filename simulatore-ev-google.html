@@ -126,6 +126,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:15
         </div>
         <div class="ac-dropdown" id="dd-from"></div>
       </div>
+      <div style="display:flex;justify-content:center;margin:-0.2rem 0">
+        <button id="btn-swap" title="Inverti partenza e arrivo" style="background:var(--surface);border:1px solid var(--border);border-radius:50%;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;color:var(--accent);transition:transform 0.3s,background 0.2s;z-index:10;flex-shrink:0">⇅</button>
+      </div>
       <div class="ac-wrap">
         <div class="input-group">
           <div class="dot dot-to"></div>
@@ -595,6 +598,30 @@ setupAC('inp-from','dd-from');
 setupAC('inp-to','dd-to');
 applyLang();
 
+// ── SWAP PARTENZA / ARRIVO ──
+document.getElementById('btn-swap').addEventListener('click', () => {
+  const inpFrom = document.getElementById('inp-from');
+  const inpTo   = document.getElementById('inp-to');
+  // Swap values
+  const tmpVal = inpFrom.value;
+  inpFrom.value = inpTo.value;
+  inpTo.value   = tmpVal;
+  // Swap selected coords
+  const tmpSel = inpFrom._selOverride || inpFrom._sel();
+  inpFrom._selOverride = inpTo._selOverride || inpTo._sel();
+  inpTo._selOverride   = tmpSel;
+  // Animate button
+  const btn = document.getElementById('btn-swap');
+  btn.style.transform = 'rotate(180deg)';
+  btn.style.background = 'var(--accent)';
+  btn.style.color = '#000';
+  setTimeout(() => {
+    btn.style.transform = 'rotate(0deg)';
+    btn.style.background = 'var(--surface)';
+    btn.style.color = 'var(--accent)';
+  }, 400);
+});
+
 // ── GEOLOCATION ──
 document.getElementById('btn-geo').addEventListener('click',async()=>{
   const btn=document.getElementById('btn-geo');
@@ -815,6 +842,30 @@ document.getElementById('btn-calc').addEventListener('click',async()=>{
     document.getElementById('results').classList.add('show');
     // Translate dynamic labels
     applyLang();
+
+// ── SWAP PARTENZA / ARRIVO ──
+document.getElementById('btn-swap').addEventListener('click', () => {
+  const inpFrom = document.getElementById('inp-from');
+  const inpTo   = document.getElementById('inp-to');
+  // Swap values
+  const tmpVal = inpFrom.value;
+  inpFrom.value = inpTo.value;
+  inpTo.value   = tmpVal;
+  // Swap selected coords
+  const tmpSel = inpFrom._selOverride || inpFrom._sel();
+  inpFrom._selOverride = inpTo._selOverride || inpTo._sel();
+  inpTo._selOverride   = tmpSel;
+  // Animate button
+  const btn = document.getElementById('btn-swap');
+  btn.style.transform = 'rotate(180deg)';
+  btn.style.background = 'var(--accent)';
+  btn.style.color = '#000';
+  setTimeout(() => {
+    btn.style.transform = 'rotate(0deg)';
+    btn.style.background = 'var(--surface)';
+    btn.style.color = 'var(--accent)';
+  }, 400);
+});
 
     // Food nearby stops (background)
     if(stops.length){
