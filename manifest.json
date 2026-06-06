@@ -1,0 +1,24 @@
+{
+  "name": "Simulatore Consumi — Tesla vs C-HR",
+  "short_name": "Simulatore",
+  "description": "Confronto costi energetici Tesla Model 3 LR vs Toyota C-HR 2.0 Hybrid",
+  "start_url": "./simulazione-tesla-vs-chr.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0d0f",
+  "theme_color": "#0d0d0f",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
