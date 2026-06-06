@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="EV Route">
+<meta name="apple-mobile-web-app-title" content="Ugo & Isotta">
 <meta name="theme-color" content="#080c14">
-<title>EV Route Simulator</title>
+<title>In viaggio con Ugo & Isotta</title>
 
 <!-- Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -138,8 +138,96 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
 <body>
 
 <div class="hero">
-  <p class="hero-label">⚡ Tesla Supercharger Route</p>
-  <h1>EV <span>Route</span><br>Simulator</h1>
+  <!-- Logo SVG: Ugo & Isotta in Tesla -->
+  <div style="display:flex;justify-content:center;margin-bottom:1rem">
+    <svg width="240" height="100" viewBox="0 0 240 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+      <!-- === TESLA MODEL 3 === -->
+      <rect x="10" y="60" width="210" height="28" rx="8" fill="#1a1a2e" stroke="#00d4ff" stroke-width="1.5"/>
+      <path d="M48 60 Q58 34 92 28 Q122 23 165 28 Q185 33 188 60Z" fill="#131b2a" stroke="#00d4ff" stroke-width="1.5"/>
+      <path d="M88 58 Q93 38 112 33 Q132 30 152 34 Q163 38 165 58Z" fill="#0f2a3a" stroke="#00d4ff" stroke-width="1"/>
+      <!-- Wheels -->
+      <circle cx="65" cy="88" r="12" fill="#0d0d0f" stroke="#00d4ff" stroke-width="2"/>
+      <circle cx="65" cy="88" r="5" fill="#00d4ff"/>
+      <circle cx="168" cy="88" r="12" fill="#0d0d0f" stroke="#00d4ff" stroke-width="2"/>
+      <circle cx="168" cy="88" r="5" fill="#00d4ff"/>
+      <!-- Headlights -->
+      <rect x="12" y="66" width="18" height="6" rx="3" fill="#00d4ff" opacity="0.9"/>
+      <rect x="198" y="66" width="16" height="5" rx="2.5" fill="#ffb300" opacity="0.8"/>
+      <!-- Tesla T -->
+      <text x="118" y="77" font-size="10" fill="#e8263a" font-family="serif" font-weight="bold" text-anchor="middle">T</text>
+      <!-- Speed lines -->
+      <line x1="2" y1="68" x2="13" y2="68" stroke="#00d4ff" stroke-width="1.5" opacity="0.5"/>
+      <line x1="0" y1="75" x2="9"  y2="75" stroke="#00d4ff" stroke-width="1"   opacity="0.3"/>
+      <line x1="2" y1="82" x2="11" y2="82" stroke="#00d4ff" stroke-width="1"   opacity="0.4"/>
+      <!-- Lightning -->
+      <path d="M228 60 L223 71 L227 71 L222 83 L230 69 L226 69Z" fill="#ffb300" opacity="0.9"/>
+
+      <!-- === UGO — Pembroke Welsh Corgi tricolore (guida, sinistra) === -->
+      <!-- Body arancio/marrone con sella nera -->
+      <ellipse cx="104" cy="52" rx="13" ry="9" fill="#c8741a"/>
+      <path d="M96 48 Q104 42 112 48 Q110 56 104 57 Q98 56 96 48Z" fill="#1a0a00"/>
+      <!-- Petto bianco -->
+      <ellipse cx="104" cy="55" rx="7" ry="5" fill="#f5f0e8"/>
+      <!-- Testa -->
+      <circle cx="104" cy="38" r="10" fill="#c8741a"/>
+      <!-- Sella nera sulla testa -->
+      <path d="M96 33 Q104 26 112 33 Q109 41 104 41 Q99 41 96 33Z" fill="#1a0a00"/>
+      <!-- Muso bianco -->
+      <ellipse cx="104" cy="41" rx="6" ry="4" fill="#f5f0e8"/>
+      <!-- Orecchie grandi dritte (tipiche corgi) -->
+      <path d="M95 32 L90 20 L99 27Z" fill="#c8741a" stroke="#1a0a00" stroke-width="0.5"/>
+      <path d="M113 32 L118 20 L109 27Z" fill="#c8741a" stroke="#1a0a00" stroke-width="0.5"/>
+      <!-- Occhi -->
+      <circle cx="100" cy="37" r="2.2" fill="#2d1a0e"/>
+      <circle cx="108" cy="37" r="2.2" fill="#2d1a0e"/>
+      <circle cx="100.8" cy="36.3" r="0.7" fill="white"/>
+      <circle cx="108.8" cy="36.3" r="0.7" fill="white"/>
+      <!-- Naso -->
+      <ellipse cx="104" cy="42.5" rx="2" ry="1.3" fill="#1a0a00"/>
+      <!-- Lingua -->
+      <path d="M101.5 45 Q104 49 106.5 45" stroke="#e8263a" stroke-width="1.5" fill="#e8263a" opacity="0.85"/>
+      <!-- Zampe sul volante -->
+      <ellipse cx="97" cy="57" rx="4" ry="2.5" fill="#f5f0e8"/>
+      <ellipse cx="111" cy="57" rx="4" ry="2.5" fill="#f5f0e8"/>
+      <!-- Label -->
+      <text x="104" y="96" font-size="6.5" fill="#ffb300" font-family="sans-serif" font-weight="bold" text-anchor="middle">UGO</text>
+
+      <!-- === ISOTTA — incrocio Yorkshire + Maltese (destra) === -->
+      <!-- Body piccolo, pelo lungo beige/grigio -->
+      <ellipse cx="136" cy="53" rx="10" ry="8" fill="#c8b89a"/>
+      <!-- Pelo lungo che scende (effetto frangia) -->
+      <path d="M127 53 Q124 60 126 65" stroke="#a89070" stroke-width="2.5" fill="none"/>
+      <path d="M145 53 Q148 60 146 65" stroke="#a89070" stroke-width="2.5" fill="none"/>
+      <path d="M130 59 Q128 66 130 70" stroke="#c8b89a" stroke-width="2" fill="none"/>
+      <path d="M142 59 Q144 66 142 70" stroke="#c8b89a" stroke-width="2" fill="none"/>
+      <!-- Testa rotonda piccola -->
+      <circle cx="136" cy="39" r="9" fill="#c8b89a"/>
+      <!-- Pelo testa voluminoso -->
+      <ellipse cx="136" cy="35" rx="10" ry="7" fill="#b8a888" opacity="0.7"/>
+      <!-- Ciuffo sulla testa (tipico yorkshire) -->
+      <path d="M131 31 Q136 26 141 31" stroke="#8B6914" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <!-- Orecchie pendenti lunghe (yorkshire/maltese) -->
+      <path d="M128 37 Q123 42 124 52" stroke="#8B6914" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path d="M144 37 Q149 42 148 52" stroke="#c8b89a" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <!-- Muso -->
+      <ellipse cx="136" cy="43" rx="5" ry="3.5" fill="#d4c4a4"/>
+      <!-- Occhi grandi (caratteristica yorkshire) -->
+      <circle cx="132" cy="39" r="2.5" fill="#1a0a00"/>
+      <circle cx="140" cy="39" r="2.5" fill="#1a0a00"/>
+      <circle cx="132.8" cy="38.3" r="0.8" fill="white"/>
+      <circle cx="140.8" cy="38.3" r="0.8" fill="white"/>
+      <!-- Naso piccolo -->
+      <circle cx="136" cy="44" r="1.2" fill="#1a0a00"/>
+      <!-- Lingua -->
+      <path d="M134 46 Q136 50 138 46" stroke="#e8263a" stroke-width="1.5" fill="#e8263a" opacity="0.85"/>
+      <!-- Label -->
+      <text x="136" y="96" font-size="6.5" fill="#00ff9d" font-family="sans-serif" font-weight="bold" text-anchor="middle">ISOTTA</text>
+
+    </svg>
+  </div>
+
+  <h1 style="font-size:clamp(1.4rem,5vw,2.4rem)">In viaggio con <span>Ugo</span> & <span style="color:var(--accent2)">Isotta</span></h1>
   <p class="hero-sub">Percorso reale · Consumi · Pedaggi · Supercharger Tesla</p>
 </div>
 
@@ -362,92 +450,124 @@ function planStops(distKm, cons, bat, socStart, socMin, scList) {
   return { stops, socAtDest: Math.round(socAtDest) };
 }
 
-// ── AUTOCOMPLETE (Nominatim) ──
+// ── AUTOCOMPLETE ──
 let acTimers = {};
+
+// Chiudi tutti i dropdown cliccando fuori (una sola volta)
+document.addEventListener('click', e => {
+  ['dd-from','dd-to'].forEach(id => {
+    const dd = document.getElementById(id);
+    const inp = document.getElementById(id.replace('dd-','inp-'));
+    if (!inp.contains(e.target) && !dd.contains(e.target)) dd.classList.remove('open');
+  });
+});
+
 function setupAC(inputId, ddId) {
   const inp = document.getElementById(inputId);
   const dd  = document.getElementById(ddId);
   let selected = null;
+
+  function showItems(features) {
+    dd.innerHTML = '';
+    if (!features.length) {
+      dd.innerHTML = '<div class="ac-item" style="color:var(--muted)">Nessun risultato trovato</div>';
+      dd.classList.add('open');
+      return;
+    }
+    const priority = ['city','town','village','suburb','municipality','district','house','street','locality'];
+    features.sort((a,b) => {
+      const ai = priority.indexOf(a.properties?.osm_value);
+      const bi = priority.indexOf(b.properties?.osm_value);
+      return (ai===-1?99:ai) - (bi===-1?99:bi);
+    }).slice(0,8).forEach(item => {
+      const p = item.properties;
+      const name    = p.name || '';
+      const street  = p.street || '';
+      const housenr = p.housenumber || '';
+      const city    = p.city || p.town || p.village || '';
+      const country = p.country || '';
+      const isPlace = ['city','town','village','suburb','municipality','district'].includes(p.osm_value);
+      const mainLabel   = isPlace ? name : [name, [street,housenr].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+      const subLabel    = isPlace ? [p.state||'',country].filter(Boolean).join(', ') : [city,country].filter(Boolean).join(', ');
+      const icon        = isPlace ? '🏙️' : (p.osm_key==='amenity'||p.osm_key==='tourism'||p.osm_key==='shop') ? '📍' : street ? '🏠' : '📌';
+      const fullLabel   = [mainLabel,city,country].filter(Boolean).join(', ');
+      const displayName = mainLabel || city || name;
+      const lat = item.geometry.coordinates[1];
+      const lon = item.geometry.coordinates[0];
+      const el = document.createElement('div');
+      el.className = 'ac-item';
+      el.innerHTML = `<strong>${icon} ${displayName}</strong><small>${subLabel}</small>`;
+      el.addEventListener('mousedown', e => {
+        e.preventDefault();
+        inp.value = fullLabel;
+        selected = { lat, lon, name: displayName };
+        dd.classList.remove('open');
+      });
+      dd.appendChild(el);
+    });
+    dd.classList.add('open');
+  }
 
   inp.addEventListener('input', () => {
     clearTimeout(acTimers[inputId]);
     selected = null;
     const q = inp.value.trim();
     if (q.length < 2) { dd.classList.remove('open'); dd.innerHTML=''; return; }
+    // Mostra subito indicatore caricamento
+    dd.innerHTML = '<div class="ac-item" style="color:var(--muted)">🔍 Ricerca in corso…</div>';
+    dd.classList.add('open');
     acTimers[inputId] = setTimeout(async () => {
-      dd.innerHTML = '<div class="ac-item" style="color:var(--muted)">🔍 Ricerca in corso…</div>';
-      dd.classList.add('open');
       try {
-        const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=10&lang=it`);
+        // Nominatim con autocomplete=1 supporta prefix search ("mi" → Milano, Milan...)
+        const nmUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=8&addressdetails=1&accept-language=it&featuretype=city`;
+        const r = await fetch(nmUrl, { headers: { 'User-Agent': 'EV-Route-Simulator/1.0' } });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
         const data = await r.json();
-        // Nessun filtro — mostra città, indirizzi, POI, strade
-        // Ordina per rilevanza: city/town prima, poi POI, poi strade/numeri civici
-        const priority = ['city','town','village','suburb','municipality','district','house','street','locality'];
-        const features = (data?.features || []).sort((a,b) => {
-          const ai = priority.indexOf(a.properties?.osm_value);
-          const bi = priority.indexOf(b.properties?.osm_value);
-          return (ai===-1?99:ai) - (bi===-1?99:bi);
-        }).slice(0, 8);
-        dd.innerHTML = '';
-        if (!features.length) {
-          dd.innerHTML = '<div class="ac-item" style="color:var(--muted)">Nessun risultato</div>';
-          dd.classList.add('open'); return;
+        if (data && data.length > 0) {
+          // Converti formato Nominatim → formato interno
+          const features = data.map(item => ({
+            geometry: { coordinates: [parseFloat(item.lon), parseFloat(item.lat)] },
+            properties: {
+              name:      item.address?.city || item.address?.town || item.address?.village
+                         || item.address?.hamlet || item.display_name.split(',')[0],
+              city:      item.address?.city || item.address?.town || item.address?.village || '',
+              country:   item.address?.country || '',
+              state:     item.address?.state || item.address?.county || '',
+              street:    item.address?.road || '',
+              housenumber: item.address?.house_number || '',
+              osm_value: item.addresstype || item.type || 'city',
+              osm_key:   item.class || '',
+            }
+          }));
+          showItems(features);
+        } else {
+          // Fallback Photon per indirizzi/POI specifici
+          const r2 = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=8&lang=it&lat=45&lon=12&location_bias_scale=0.4`);
+          const data2 = await r2.json();
+          showItems(data2?.features || []);
         }
-        features.forEach(item => {
-          const p = item.properties;
-          // Costruisci label completa: nome + via + numero + città + paese
-          const name    = p.name || '';
-          const street  = p.street || '';
-          const housenr = p.housenumber || '';
-          const city    = p.city || p.town || p.village || '';
-          const country = p.country || '';
-          // Label principale: per POI/indirizzi mostra nome + strada; per città solo nome
-          const isPlace = ['city','town','village','suburb','municipality','district'].includes(p.osm_value);
-          const mainLabel = isPlace
-            ? name
-            : [name, [street, housenr].filter(Boolean).join(' ')].filter(Boolean).join(', ');
-          const subLabel = isPlace
-            ? [p.state||'', country].filter(Boolean).join(', ')
-            : [city, country].filter(Boolean).join(', ');
-          // Icona tipo
-          const icon = isPlace ? '🏙️'
-            : p.osm_key === 'amenity' || p.osm_key === 'tourism' || p.osm_key === 'shop' ? '📍'
-            : street ? '🏠' : '📌';
-          // Coordinata
-          const lat = item.geometry.coordinates[1];
-          const lon = item.geometry.coordinates[0];
-          // Full label per input
-          const fullLabel = [mainLabel, city, country].filter(Boolean).join(', ');
-          const displayName = mainLabel || city || name;
-          const el = document.createElement('div');
-          el.className = 'ac-item';
-          el.innerHTML = `<strong>${icon} ${displayName}</strong><small>${subLabel}</small>`;
-          el.addEventListener('mousedown', e => {
-            e.preventDefault();
-            inp.value = fullLabel;
-            selected = { lat, lon, name: displayName };
-            dd.classList.remove('open'); dd.innerHTML = '';
-          });
-          dd.appendChild(el);
-        });
-        dd.classList.add('open');
-      } catch(e) { dd.classList.remove('open'); }
-    }, 200);
+      } catch(err) {
+        // Ultimo fallback: Photon
+        try {
+          const r3 = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=8&lang=it`);
+          const data3 = await r3.json();
+          showItems(data3?.features || []);
+        } catch(err2) {
+          dd.innerHTML = '<div class="ac-item" style="color:#ff6b6b">❌ Errore di rete — controlla la connessione</div>';
+          dd.classList.add('open');
+        }
+      }
+    }, 250);
   });
 
-  // Chiudi dropdown solo se il click NON è su un item del dropdown
-  document.addEventListener('click', e => {
-    if (!inp.contains(e.target) && !dd.contains(e.target)) {
-      dd.classList.remove('open');
-    }
-  });
-  // Allow Enter to pick first result
   inp.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
-      const first = dd.querySelector('.ac-item');
+      const first = dd.querySelector('.ac-item:not([style*="muted"]):not([style*="ff6b6b"])');
       if (first && dd.classList.contains('open')) first.dispatchEvent(new MouseEvent('mousedown'));
     }
+    if (e.key === 'Escape') dd.classList.remove('open');
   });
+
   inp._sel = () => selected;
 }
 
