@@ -163,7 +163,7 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
 
   <!-- ROUTE -->
   <div class="card" style="overflow:visible">
-    <p class="card-title">📍 Percorso</p>
+    <p class="card-title" data-i18n="cardRoute">📍 Percorso</p>
     <div class="route-wrap">
       <div class="ac-wrap">
         <div class="input-group">
@@ -185,39 +185,39 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
 
   <!-- PARAMETRI AUTO -->
   <div class="card">
-    <p class="card-title">🚗 Parametri auto</p>
+    <p class="card-title" data-i18n="cardCar">🚗 Parametri auto</p>
     <div class="params-grid">
       <div class="param-item">
-        <label>Consumo</label>
+        <label data-i18n="lblCons">Consumo</label>
         <input class="param-input" id="p-cons" type="number" value="16" min="8" max="40" step="0.5">
-        <div class="param-unit">kWh / 100 km</div>
+        <div class="param-unit" data-i18n="unitCons">kWh / 100 km</div>
       </div>
       <div class="param-item">
-        <label>Batteria totale</label>
+        <label data-i18n="lblBat">Batteria totale</label>
         <input class="param-input" id="p-bat" type="number" value="75" min="20" max="150">
         <div class="param-unit">kWh</div>
       </div>
       <div class="param-item">
-        <label>Carica attuale</label>
+        <label data-i18n="lblSoc">Carica attuale</label>
         <input class="param-input" id="p-soc" type="number" value="80" min="5" max="100">
-        <div class="param-unit">% SOC partenza</div>
+        <div class="param-unit" data-i18n="unitSoc">% SOC partenza</div>
       </div>
       <div class="param-item">
-        <label>Soglia minima sosta</label>
+        <label data-i18n="lblMin">Soglia minima sosta</label>
         <input class="param-input" id="p-min" type="number" value="15" min="5" max="30">
-        <div class="param-unit">% SOC trigger</div>
+        <div class="param-unit" data-i18n="unitMin">% SOC trigger</div>
       </div>
     </div>
     <div class="slider-group">
       <div class="slider-header">
-        <span style="color:var(--muted)">Costo energia domestica</span>
+        <span style="color:var(--muted)" data-i18n="lblKwh">Costo energia domestica</span>
         <span id="lbl-kwh">€ 0,50/kWh</span>
       </div>
       <input class="ev-range" id="sl-kwh" type="range" min="0.15" max="0.80" step="0.01" value="0.50">
     </div>
     <div class="slider-group">
       <div class="slider-header">
-        <span style="color:var(--muted)">Costo ricarica Supercharger</span>
+        <span style="color:var(--muted)" data-i18n="lblSc">Costo ricarica Supercharger</span>
         <span id="lbl-sc">€ 0,62/kWh</span>
       </div>
       <input class="ev-range" id="sl-sc" type="range" min="0.40" max="0.90" step="0.01" value="0.62">
@@ -226,27 +226,27 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
 
   <!-- PEDAGGI -->
   <div class="card">
-    <p class="card-title">🛣️ Pedaggi autostrada</p>
+    <p class="card-title" data-i18n="cardToll">🛣️ Pedaggi autostrada</p>
     <div class="param-item">
-      <label>Tariffa media autostrada</label>
+      <label data-i18n="lblTollRate">Tariffa media autostrada</label>
       <input class="param-input" id="p-toll" type="number" value="0.075" min="0.01" max="0.30" step="0.001" style="color:var(--warn)">
-      <div class="param-unit">€ / km autostradale · % calcolata automaticamente dal percorso</div>
+      <div class="param-unit" data-i18n="unitToll">€ / km autostradale · % calcolata automaticamente dal percorso</div>
     </div>
   </div>
 
   <!-- CONFRONTO AUTO TERMICA -->
   <div class="card">
-    <p class="card-title">⛽ Confronto auto termica</p>
+    <p class="card-title" data-i18n="cardThermal">⛽ Confronto auto termica</p>
     <div class="slider-group">
       <div class="slider-header">
-        <span style="color:var(--muted)">Costo carburante</span>
+        <span style="color:var(--muted)" data-i18n="lblFuel">Costo carburante</span>
         <span id="lbl-fuel">€ 1,90/L</span>
       </div>
       <input class="ev-range" id="sl-fuel" type="range" min="1.40" max="2.50" step="0.01" value="1.90">
     </div>
     <div class="slider-group">
       <div class="slider-header">
-        <span style="color:var(--muted)">Consumo auto termica</span>
+        <span style="color:var(--muted)" data-i18n="lblThCons">Consumo auto termica</span>
         <span id="lbl-thcons">6,0 L/100km</span>
       </div>
       <input class="ev-range" id="sl-thcons" type="range" min="4.0" max="15.0" step="0.1" value="6.0">
@@ -264,7 +264,7 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
     <div class="card">
       <div class="spinner-wrap">
         <div class="spinner"></div>
-        <span style="font-family:var(--mono);font-size:0.7rem;color:var(--muted)">Caricamento rete Supercharger e calcolo percorso…</span>
+        <span style="font-family:var(--mono);font-size:0.7rem;color:var(--muted)" data-i18n="loading">Caricamento rete Supercharger e calcolo percorso…</span>
       </div>
     </div>
   </div>
@@ -411,6 +411,243 @@ function planStops(distKm, cons, bat, socStart, socMin, scList, scRate=0.62) {
   return { stops, socAtDest: Math.round(socAtDest) };
 }
 
+
+// ── INTERNAZIONALIZZAZIONE ──
+const LANGS = {
+  it: {
+    heroSub:        'Percorso reale · Consumi · Pedaggi · Supercharger Tesla',
+    cardRoute:      '📍 Percorso',
+    placFrom:       'Partenza (es. Milano)',
+    placTo:         'Arrivo (es. Roma)',
+    cardCar:        '🚗 Parametri auto',
+    lblCons:        'Consumo',
+    unitCons:       'kWh / 100 km',
+    lblBat:         'Batteria totale',
+    unitBat:        'kWh',
+    lblSoc:         'Carica attuale',
+    unitSoc:        '% SOC partenza',
+    lblMin:         'Soglia minima sosta',
+    unitMin:        '% SOC trigger',
+    lblKwh:         'Costo energia domestica',
+    lblSc:          'Costo ricarica Supercharger',
+    cardToll:       '🛣️ Pedaggi autostrada',
+    lblTollRate:    'Tariffa media autostrada',
+    unitToll:       '€ / km autostradale · % calcolata automaticamente dal percorso',
+    cardThermal:    '⛽ Confronto auto termica',
+    lblFuel:        'Costo carburante',
+    lblThCons:      'Consumo auto termica',
+    btnCalc:        '⚡ Calcola percorso',
+    btnTest:        '🔧 Test connessione servizi',
+    loading:        'Caricamento rete Supercharger e calcolo percorso…',
+    cardSummary:    '📊 Riepilogo percorso',
+    cardCosts:      '💰 Costi stimati',
+    cardStops:      '⚡ Supercharger Tesla sul percorso',
+    cardComp:       '⛽ Confronto con auto termica',
+    lblKmTot:       'km totali',
+    lblDuration:    'durata guida',
+    lblKwhTot:      'kWh consumati',
+    lblSocArr:      "SOC stimato all'arrivo",
+    noStop:         'Nessuna sosta necessaria',
+    siteTitle:     'Viaggio in elettrico con Ugo & Isotta',
+    footerNote:     'Percorso via OSRM. Mappa OpenStreetMap. Supercharger Tesla live da supercharge.info. Pedaggi stimati. Costo SC: tariffa media Tesla Europa ~€0,62/kWh.',
+  },
+  en: {
+    heroSub:        'Real route · Consumption · Tolls · Tesla Supercharger',
+    cardRoute:      '📍 Route',
+    placFrom:       'Departure (e.g. Milan)',
+    placTo:         'Arrival (e.g. Rome)',
+    cardCar:        '🚗 Car parameters',
+    lblCons:        'Consumption',
+    unitCons:       'kWh / 100 km',
+    lblBat:         'Total battery',
+    unitBat:        'kWh',
+    lblSoc:         'Current charge',
+    unitSoc:        '% SOC departure',
+    lblMin:         'Minimum stop threshold',
+    unitMin:        '% SOC trigger',
+    lblKwh:         'Home energy cost',
+    lblSc:          'Supercharger charging cost',
+    cardToll:       '🛣️ Highway tolls',
+    lblTollRate:    'Average highway rate',
+    unitToll:       '€ / highway km · % calculated automatically from route',
+    cardThermal:    '⛽ Comparison with petrol car',
+    lblFuel:        'Fuel cost',
+    lblThCons:      'Petrol car consumption',
+    btnCalc:        '⚡ Calculate route',
+    btnTest:        '🔧 Test service connection',
+    loading:        'Loading Supercharger network and calculating route…',
+    cardSummary:    '📊 Route summary',
+    cardCosts:      '💰 Estimated costs',
+    cardStops:      '⚡ Tesla Superchargers on route',
+    cardComp:       '⛽ Comparison with petrol car',
+    lblKmTot:       'total km',
+    lblDuration:    'driving time',
+    lblKwhTot:      'kWh consumed',
+    lblSocArr:      'Estimated SOC at arrival',
+    noStop:         'No charging stop needed',
+    siteTitle:     'Electric journey with Ugo & Isotta',
+    footerNote:     'Route via OSRM. Map OpenStreetMap. Tesla Superchargers live from supercharge.info. Tolls estimated. SC cost: Tesla Europe avg ~€0.62/kWh.',
+  },
+  fr: {
+    heroSub:        'Itinéraire réel · Consommation · Péages · Tesla Supercharger',
+    cardRoute:      '📍 Itinéraire',
+    placFrom:       'Départ (ex. Milan)',
+    placTo:         'Arrivée (ex. Rome)',
+    cardCar:        '🚗 Paramètres du véhicule',
+    lblCons:        'Consommation',
+    unitCons:       'kWh / 100 km',
+    lblBat:         'Batterie totale',
+    unitBat:        'kWh',
+    lblSoc:         'Charge actuelle',
+    unitSoc:        '% SOC départ',
+    lblMin:         'Seuil minimum arrêt',
+    unitMin:        '% SOC déclencheur',
+    lblKwh:         'Coût énergie domestique',
+    lblSc:          'Coût recharge Supercharger',
+    cardToll:       '🛣️ Péages autoroute',
+    lblTollRate:    'Tarif moyen autoroute',
+    unitToll:       '€ / km autoroute · % calculé automatiquement',
+    cardThermal:    '⛽ Comparaison voiture thermique',
+    lblFuel:        'Coût carburant',
+    lblThCons:      'Consommation voiture thermique',
+    btnCalc:        '⚡ Calculer l'itinéraire',
+    btnTest:        '🔧 Test connexion services',
+    loading:        'Chargement réseau Supercharger…',
+    cardSummary:    '📊 Résumé de l'itinéraire',
+    cardCosts:      '💰 Coûts estimés',
+    cardStops:      '⚡ Superchargers Tesla sur l'itinéraire',
+    cardComp:       '⛽ Comparaison voiture thermique',
+    lblKmTot:       'km totaux',
+    lblDuration:    'durée conduite',
+    lblKwhTot:      'kWh consommés',
+    lblSocArr:      'SOC estimé à l'arrivée',
+    noStop:         'Aucun arrêt de recharge nécessaire',
+    siteTitle:     'Voyage électrique avec Ugo & Isotta',
+    footerNote:     'Itinéraire via OSRM. Carte OpenStreetMap. Superchargers Tesla en direct depuis supercharge.info.',
+  },
+  de: {
+    heroSub:        'Echte Route · Verbrauch · Maut · Tesla Supercharger',
+    cardRoute:      '📍 Route',
+    placFrom:       'Abfahrt (z.B. Mailand)',
+    placTo:         'Ankunft (z.B. Rom)',
+    cardCar:        '🚗 Fahrzeugparameter',
+    lblCons:        'Verbrauch',
+    unitCons:       'kWh / 100 km',
+    lblBat:         'Gesamtbatterie',
+    unitBat:        'kWh',
+    lblSoc:         'Aktueller Ladestand',
+    unitSoc:        '% SOC Abfahrt',
+    lblMin:         'Mindeststoppschwelle',
+    unitMin:        '% SOC Auslöser',
+    lblKwh:         'Heimstromkosten',
+    lblSc:          'Supercharger Ladekosten',
+    cardToll:       '🛣️ Autobahnmaut',
+    lblTollRate:    'Durchschnittlicher Mautsatz',
+    unitToll:       '€ / Autobahn-km · % automatisch berechnet',
+    cardThermal:    '⛽ Vergleich Verbrenner',
+    lblFuel:        'Kraftstoffkosten',
+    lblThCons:      'Verbrauch Verbrenner',
+    btnCalc:        '⚡ Route berechnen',
+    btnTest:        '🔧 Dienste testen',
+    loading:        'Supercharger-Netzwerk wird geladen…',
+    cardSummary:    '📊 Routenübersicht',
+    cardCosts:      '💰 Geschätzte Kosten',
+    cardStops:      '⚡ Tesla Supercharger auf der Route',
+    cardComp:       '⛽ Vergleich Verbrenner',
+    lblKmTot:       'km gesamt',
+    lblDuration:    'Fahrzeit',
+    lblKwhTot:      'kWh verbraucht',
+    lblSocArr:      'Geschätzter SOC bei Ankunft',
+    noStop:         'Kein Ladestopp erforderlich',
+    siteTitle:     'Elektrische Reise mit Ugo & Isotta',
+    footerNote:     'Route via OSRM. Karte OpenStreetMap. Tesla Supercharger live von supercharge.info.',
+  },
+  es: {
+    heroSub:        'Ruta real · Consumo · Peajes · Tesla Supercharger',
+    cardRoute:      '📍 Ruta',
+    placFrom:       'Salida (p.ej. Milán)',
+    placTo:         'Llegada (p.ej. Roma)',
+    cardCar:        '🚗 Parámetros del vehículo',
+    lblCons:        'Consumo',
+    unitCons:       'kWh / 100 km',
+    lblBat:         'Batería total',
+    unitBat:        'kWh',
+    lblSoc:         'Carga actual',
+    unitSoc:        '% SOC salida',
+    lblMin:         'Umbral mínimo parada',
+    unitMin:        '% SOC disparador',
+    lblKwh:         'Coste energía doméstica',
+    lblSc:          'Coste carga Supercharger',
+    cardToll:       '🛣️ Peajes autopista',
+    lblTollRate:    'Tarifa media autopista',
+    unitToll:       '€ / km autopista · % calculado automáticamente',
+    cardThermal:    '⛽ Comparación coche térmico',
+    lblFuel:        'Coste combustible',
+    lblThCons:      'Consumo coche térmico',
+    btnCalc:        '⚡ Calcular ruta',
+    btnTest:        '🔧 Probar conexión',
+    loading:        'Cargando red Supercharger…',
+    cardSummary:    '📊 Resumen de ruta',
+    cardCosts:      '💰 Costes estimados',
+    cardStops:      '⚡ Superchargers Tesla en ruta',
+    cardComp:       '⛽ Comparación coche térmico',
+    lblKmTot:       'km totales',
+    lblDuration:    'tiempo conducción',
+    lblKwhTot:      'kWh consumidos',
+    lblSocArr:      'SOC estimado a la llegada',
+    noStop:         'No se necesita parada de carga',
+    siteTitle:     'Viaje eléctrico con Ugo & Isotta',
+    footerNote:     'Ruta via OSRM. Mapa OpenStreetMap. Superchargers Tesla en directo desde supercharge.info.',
+  }
+};
+
+function getLang() {
+  const nav = (navigator.language || navigator.userLanguage || 'it').slice(0,2).toLowerCase();
+  return LANGS[nav] || LANGS['en']; // fallback inglese
+}
+
+function applyLang() {
+  const t = getLang();
+  // Hero
+  const heroSub = document.querySelector('.hero-sub');
+  if (heroSub) heroSub.textContent = t.heroSub;
+  // Inputs placeholder
+  const inpFrom = document.getElementById('inp-from');
+  const inpTo   = document.getElementById('inp-to');
+  if (inpFrom) inpFrom.placeholder = t.placFrom;
+  if (inpTo)   inpTo.placeholder   = t.placTo;
+  // Card titles
+  const cardTitles = document.querySelectorAll('.card-title');
+  const titleMap = {
+    0: t.cardRoute,
+  };
+  // Use data attributes for reliable mapping
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (t[key]) el.textContent = t[key];
+  });
+  // Aggiorna titolo pagina e h1
+  if (t.siteTitle) {
+    document.title = t.siteTitle;
+    const h1 = document.querySelector('.hero h1');
+    if (h1) {
+      h1.innerHTML = t.siteTitle
+        .replace('Ugo', '<span>Ugo</span>')
+        .replace('Isotta', '<span style="color:var(--accent2)">Isotta</span>');
+    }
+  }
+  // Buttons
+  const btnCalc = document.getElementById('btn-calc');
+  if (btnCalc) btnCalc.querySelector('.btn-text') ? 
+    btnCalc.querySelector('.btn-text').textContent = t.btnCalc :
+    btnCalc.textContent = t.btnCalc;
+  const btnTest = document.getElementById('btn-test');
+  if (btnTest) btnTest.textContent = t.btnTest;
+}
+
+// Expose t() for dynamic content
+function t(key) { return getLang()[key] || key; }
+
 // ── AUTOCOMPLETE ──
 let acTimers = {};
 
@@ -541,6 +778,7 @@ function setupAC(inputId, ddId) {
 
 setupAC('inp-from','dd-from');
 setupAC('inp-to','dd-to');
+applyLang();
 
 // ── GEOLOCALIZZAZIONE ──
 let geoMarker = null;
@@ -892,12 +1130,22 @@ document.getElementById('btn-calc').addEventListener('click', async () => {
     // ── CONFRONTO AUTO TERMICA ──
     const thLitri     = (thCons / 100) * distKm;
     const thFuelCost  = thLitri * fuelPrice;
-    const thTotalCost = thFuelCost + tollCost; // stessa autostrada
+    const thTotalCost = thFuelCost + tollCost;
     const evTotalCost = tripCost;
     const delta       = thTotalCost - evTotalCost;
     const deltaSign   = delta >= 0 ? '+' : '';
     const deltaColor  = delta >= 0 ? '#00ff9d' : '#ff6b6b';
     const pctSaving   = thTotalCost > 0 ? Math.round(Math.abs(delta) / thTotalCost * 100) : 0;
+
+    // CO2: benzina emette ~2.31 kg CO2/litro (fonte ISPRA/EEA)
+    // EV: media rete elettrica italiana ~233 gCO2/kWh (fonte GSE 2023)
+    const CO2_BENZINA_KG_PER_L  = 2.31;
+    const CO2_ELETTRICO_G_PER_KWH = 233;
+    const thCo2Kg = thLitri * CO2_BENZINA_KG_PER_L;
+    const evCo2Kg = (totalKwh * CO2_ELETTRICO_G_PER_KWH) / 1000;
+    const co2Saved = thCo2Kg - evCo2Kg;
+    const co2SavedPct = thCo2Kg > 0 ? Math.round(co2Saved / thCo2Kg * 100) : 0;
+    const co2Color = co2Saved >= 0 ? '#00ff9d' : '#ff6b6b';
 
     document.getElementById('comparison-rows').innerHTML = `
       <div class="cost-row">
@@ -916,8 +1164,25 @@ document.getElementById('btn-calc').addEventListener('click', async () => {
         <span class="cost-label"><strong>${delta >= 0 ? '✅ Risparmi con la Tesla' : '⚠️ La termica costa meno'}</strong></span>
         <span class="cost-val" style="color:${deltaColor};font-size:1rem">${deltaSign}${fmtE(Math.abs(delta))} (${pctSaving}%)</span>
       </div>
-      <div style="margin-top:0.8rem;padding:0.7rem;background:var(--surface);border-radius:8px;font-family:var(--mono);font-size:0.62rem;color:var(--muted);line-height:1.8">
-        Tesla: ${fmtE(evTotalCost)} &nbsp;·&nbsp; Termica: ${fmtE(thTotalCost)} &nbsp;·&nbsp; Δ ${deltaSign}${fmtE(Math.abs(delta))}
+
+      <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
+        <div style="font-family:var(--mono);font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.6rem">🌿 Emissioni CO₂</div>
+        <div class="cost-row">
+          <span class="cost-label">🌫️ Auto termica (2,31 kg CO₂/L)</span>
+          <span class="cost-val" style="color:#ff8c42">${thCo2Kg.toFixed(1)} kg</span>
+        </div>
+        <div class="cost-row">
+          <span class="cost-label">⚡ Tesla (mix elettrico IT ~233 g/kWh)</span>
+          <span class="cost-val" style="color:var(--accent2)">${evCo2Kg.toFixed(1)} kg</span>
+        </div>
+        <div class="cost-row" style="background:rgba(0,255,157,0.05);border:1px solid rgba(0,255,157,0.15);border-radius:10px">
+          <span class="cost-label"><strong>${co2Saved >= 0 ? '🌱 CO₂ risparmiata' : '⚠️ CO₂ in più'}</strong></span>
+          <span class="cost-val" style="color:${co2Color};font-size:1rem">${Math.abs(co2Saved).toFixed(1)} kg (${co2SavedPct}%)</span>
+        </div>
+      </div>
+
+      <div style="margin-top:0.8rem;padding:0.6rem 0.8rem;background:var(--surface);border-radius:8px;font-family:var(--mono);font-size:0.6rem;color:var(--muted);line-height:1.8">
+        Fonte: ISPRA (CO₂ benzina) · GSE 2023 (mix elettrico italiano)
       </div>`;
 
     document.getElementById('results').classList.add('show');
