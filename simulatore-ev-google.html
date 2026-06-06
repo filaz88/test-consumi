@@ -127,6 +127,10 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
 
 .note { font-size:0.7rem; color:var(--muted); line-height:1.6; padding:0.75rem 1rem; background:rgba(0,212,255,0.04); border-left:2px solid var(--accent); border-radius:0 8px 8px 0; }
 .note strong { color:var(--accent); }
+@keyframes pulse {
+  0%,100% { box-shadow:0 0 8px #00d4ff; transform:scale(1); }
+  50%      { box-shadow:0 0 18px #00d4ff; transform:scale(1.2); }
+}
 
 @media(max-width:400px) {
   .params-grid { grid-template-columns:1fr; }
@@ -240,7 +244,8 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
       <div class="ac-wrap">
         <div class="input-group">
           <div class="dot dot-from"></div>
-          <input id="inp-from" class="ev-input" type="text" placeholder="Partenza (es. Milano)" autocomplete="off">
+          <input id="inp-from" class="ev-input" type="text" placeholder="Partenza (es. Milano)" autocomplete="off" style="padding-right:2.8rem">
+          <button id="btn-geolocate" title="Usa posizione attuale" style="position:absolute;right:0.7rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0;line-height:1;font-size:1.1rem;color:var(--accent);z-index:3" onclick="geolocate()">📍</button>
         </div>
         <div class="ac-dropdown" id="dd-from"></div>
       </div>
@@ -453,12 +458,14 @@ function planStops(distKm, cons, bat, socStart, socMin, scList) {
 // ── AUTOCOMPLETE ──
 let acTimers = {};
 
-// Chiudi tutti i dropdown cliccando fuori (una sola volta)
-document.addEventListener('click', e => {
+// Chiudi dropdown cliccando fuori — usa mousedown per anticipare il blur
+document.addEventListener('mousedown', e => {
   ['dd-from','dd-to'].forEach(id => {
-    const dd = document.getElementById(id);
-    const inp = document.getElementById(id.replace('dd-','inp-'));
-    if (!inp.contains(e.target) && !dd.contains(e.target)) dd.classList.remove('open');
+    const dd  = document.getElementById(id);
+    const inp = document.getElementById('inp-' + id.replace('dd-',''));
+    if (!inp.contains(e.target) && !dd.contains(e.target)) {
+      dd.classList.remove('open');
+    }
   });
 });
 
@@ -508,21 +515,25 @@ function setupAC(inputId, ddId) {
     dd.classList.add('open');
   }
 
+  let currentQuery = '';
   inp.addEventListener('input', () => {
     clearTimeout(acTimers[inputId]);
     selected = null;
     const q = inp.value.trim();
+    currentQuery = q;
     if (q.length < 2) { dd.classList.remove('open'); dd.innerHTML=''; return; }
     // Mostra subito indicatore caricamento
     dd.innerHTML = '<div class="ac-item" style="color:var(--muted)">🔍 Ricerca in corso…</div>';
     dd.classList.add('open');
     acTimers[inputId] = setTimeout(async () => {
+      if (q !== currentQuery) return; // query superata, ignora
       try {
         // Nominatim con autocomplete=1 supporta prefix search ("mi" → Milano, Milan...)
         const nmUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=8&addressdetails=1&accept-language=it&featuretype=city`;
         const r = await fetch(nmUrl, { headers: { 'User-Agent': 'EV-Route-Simulator/1.0' } });
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const data = await r.json();
+        if (q !== currentQuery) return; // stale
         if (data && data.length > 0) {
           // Converti formato Nominatim → formato interno
           const features = data.map(item => ({
@@ -568,11 +579,72 @@ function setupAC(inputId, ddId) {
     if (e.key === 'Escape') dd.classList.remove('open');
   });
 
-  inp._sel = () => selected;
+  inp._sel = () => inp._selOverride || selected;
+  inp.addEventListener('input', () => { inp._selOverride = null; }); // reset on manual type
 }
 
 setupAC('inp-from','dd-from');
 setupAC('inp-to','dd-to');
+
+// ── GEOLOCALIZZAZIONE ──
+let geoMarker = null;
+
+async function geolocate() {
+  const btn = document.getElementById('btn-geolocate');
+  if (!navigator.geolocation) {
+    alert('Geolocalizzazione non supportata dal browser.');
+    return;
+  }
+  btn.textContent = '⏳';
+  btn.style.pointerEvents = 'none';
+
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
+
+    // Metti pin sulla mappa
+    if (geoMarker) map.removeLayer(geoMarker);
+    const geoIcon = L.divIcon({
+      html: `<div style="width:16px;height:16px;background:#00d4ff;border-radius:50%;border:3px solid #fff;box-shadow:0 0 12px #00d4ff;animation:pulse 1.5s infinite"></div>`,
+      iconAnchor: [8,8], className: ''
+    });
+    geoMarker = L.marker([lat, lon], { icon: geoIcon })
+      .bindPopup('<b>📍 Sei qui</b>')
+      .addTo(map);
+    map.setView([lat, lon], 12);
+
+    // Reverse geocode con Nominatim
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=it`);
+      const d = await r.json();
+      const city    = d.address?.city || d.address?.town || d.address?.village || d.address?.county || '';
+      const country = d.address?.country || '';
+      const label   = [city, country].filter(Boolean).join(', ');
+      const inp = document.getElementById('inp-from');
+      inp.value = label;
+      // Imposta selected per il campo partenza
+      inp._selOverride = { lat, lon, name: city || label };
+    } catch(e) {
+      // Se reverse geocode fallisce usa coordinate dirette
+      const inp = document.getElementById('inp-from');
+      inp.value = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+      inp._selOverride = { lat, lon, name: 'Posizione attuale' };
+    }
+
+    btn.textContent = '✅';
+    setTimeout(() => { btn.textContent = '📍'; btn.style.pointerEvents = 'auto'; }, 2000);
+
+  }, err => {
+    btn.textContent = '📍';
+    btn.style.pointerEvents = 'auto';
+    const msgs = {
+      1: 'Permesso negato. Abilita la geolocalizzazione nelle impostazioni del browser.',
+      2: 'Posizione non disponibile.',
+      3: 'Timeout. Riprova.'
+    };
+    alert(msgs[err.code] || 'Errore geolocalizzazione.');
+  }, { enableHighAccuracy: true, timeout: 10000 });
+}
 
 // ── SLIDER ──
 document.getElementById('sl-kwh').addEventListener('input', function() {
