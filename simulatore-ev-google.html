@@ -372,7 +372,7 @@ function setupAC(inputId, ddId) {
     if (q.length < 3) { dd.classList.remove('open'); dd.innerHTML=''; return; }
     acTimers[inputId] = setTimeout(async () => {
       try {
-        const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1`, { headers:{'Accept-Language':'it'} });
+        const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1`, { headers:{'Accept-Language':'it','User-Agent':'EV-Route-Simulator/1.0'} });
         const data = await r.json();
         dd.innerHTML = '';
         if (!data.length) { dd.classList.remove('open'); return; }
@@ -430,15 +430,15 @@ document.getElementById('btn-calc').addEventListener('click', async () => {
   const kwh      = parseFloat(document.getElementById('sl-kwh').value)||0.50;
   const tollRate = parseFloat(document.getElementById('p-toll').value)||0.075;
 
+  const geocode = async q => {
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`,{headers:{'Accept-Language':'it','User-Agent':'EV-Route-Simulator/1.0'}});
+    const d = await r.json();
+    if (!d.length) throw new Error(`Città non trovata: "${q}". Seleziona dal menu a tendina.`);
+    return { lat:parseFloat(d[0].lat), lon:parseFloat(d[0].lon), name:d[0].display_name.split(',')[0] };
+  };
+
   try {
     // 1. Geocode if needed
-    async function geocode(q) {
-      const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`,{headers:{'Accept-Language':'it'}});
-      const d = await r.json();
-      if (!d.length) throw new Error(`Città non trovata: "${q}"`);
-      return { lat:parseFloat(d[0].lat), lon:parseFloat(d[0].lon), name:d[0].display_name.split(',')[0] };
-    }
-
     const fromSel = document.getElementById('inp-from')._sel();
     const toSel   = document.getElementById('inp-to')._sel();
     const from = fromSel || await geocode(fromVal);
@@ -449,7 +449,7 @@ document.getElementById('btn-calc').addEventListener('click', async () => {
     const orsRes = await fetch(
       `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${ORS_KEY}&start=${from.lon},${from.lat}&end=${to.lon},${to.lat}`
     );
-    if (!orsRes.ok) throw new Error(`OpenRouteService: ${orsRes.status}`);
+    if (!orsRes.ok) throw new Error(`Errore calcolo percorso (${orsRes.status}). Riprova tra qualche secondo o scegli città diverse.`);
     const orsData = await orsRes.json();
     const seg   = orsData?.features?.[0]?.properties?.segments?.[0];
     const geom  = orsData?.features?.[0]?.geometry?.coordinates; // [lon,lat]
@@ -549,7 +549,7 @@ document.getElementById('btn-calc').addEventListener('click', async () => {
       </div>
       <div class="cost-row">
         <span class="cost-label">Costo per km</span>
-        <span class="cost-val c-energy">${fmtE(totalCost/distKm)}/km</span>
+        <span class="cost-val c-energy">${distKm>0?fmtE(totalCost/distKm):'—'}/km</span>
       </div>`;
     document.getElementById('cost-rows').innerHTML = costHTML;
 
@@ -565,7 +565,7 @@ document.getElementById('btn-calc').addEventListener('click', async () => {
         </div>
       </div>`;
     } else {
-      sl.innerHTML = stops.map((s,i) => `
+      sl.innerHTML = stops.map(s => `
         <div class="stop-item">
           <div class="stop-icon">🔴</div>
           <div style="flex:1">
