@@ -216,6 +216,10 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
   </div>
 
   <button class="btn-calc" id="btn-calc">⚡ Calcola percorso</button>
+  <button id="btn-test" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;border-radius:10px;padding:0.6rem;cursor:pointer;margin-top:-0.3rem">
+    🔧 Test connessione servizi
+  </button>
+  <div id="test-results" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;font-family:var(--mono);font-size:0.7rem;line-height:2"></div>
   <div class="error-box" id="error-box"></div>
 
   <div id="loading-box" style="display:none">
@@ -629,11 +633,38 @@ document.getElementById('btn-calc').addEventListener('click', async () => {
     document.getElementById('results').classList.add('show');
 
   } catch(e) {
-    showErr('❌ ' + e.message);
+    showErr('❌ ' + e.message + '<br><small style="opacity:0.6">Dettaglio: ' + (e.stack||e.toString()).split('\n')[0] + '</small>');
+    console.error('EV Simulator error:', e);
   } finally {
     document.getElementById('loading-box').style.display='none';
     document.getElementById('btn-calc').disabled=false;
   }
+});
+
+// ── CONNECTIVITY TEST ──
+document.getElementById('btn-test').addEventListener('click', async () => {
+  const box = document.getElementById('test-results');
+  box.style.display = 'block';
+  box.innerHTML = 'Test in corso…';
+  const results = [];
+
+  const test = async (name, url) => {
+    try {
+      const r = await fetch(url);
+      const ok = r.ok || r.status === 200;
+      results.push(`${ok ? '✅' : '⚠️'} ${name}: HTTP ${r.status}`);
+    } catch(e) {
+      results.push(`❌ ${name}: ${e.message}`);
+    }
+  };
+
+  await test('Photon geocoding',     'https://photon.komoot.io/api/?q=Milano&limit=1');
+  await test('Nominatim geocoding',  'https://nominatim.openstreetmap.org/search?q=Roma&format=json&limit=1');
+  await test('OpenRouteService',     `https://api.openrouteservice.org/v2/directions/driving-car?api_key=5b3ce3597851110001cf624888c1c3a5c6a74f92b73e9f6f9d3a2c66&start=9.19,45.46&end=12.49,41.89`);
+  await test('Supercharge.info',     'https://supercharge.info/service/supercharge/allSites');
+  await test('CartoDB tiles',        'https://a.basemaps.cartocdn.com/dark_all/5/16/11.png');
+
+  box.innerHTML = results.join('<br>');
 });
 </script>
 </body>
