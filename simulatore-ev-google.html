@@ -375,6 +375,8 @@ function setupAC(inputId, ddId) {
     const q = inp.value.trim();
     if (q.length < 2) { dd.classList.remove('open'); dd.innerHTML=''; return; }
     acTimers[inputId] = setTimeout(async () => {
+      dd.innerHTML = '<div class="ac-item" style="color:var(--muted)">🔍 Ricerca in corso…</div>';
+      dd.classList.add('open');
       try {
         const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=10&lang=it`);
         const data = await r.json();
@@ -430,10 +432,15 @@ function setupAC(inputId, ddId) {
         });
         dd.classList.add('open');
       } catch(e) { dd.classList.remove('open'); }
-    }, 350);
+    }, 200);
   });
 
-  inp.addEventListener('blur', () => setTimeout(()=>dd.classList.remove('open'), 200));
+  // Chiudi dropdown solo se il click NON è su un item del dropdown
+  document.addEventListener('click', e => {
+    if (!inp.contains(e.target) && !dd.contains(e.target)) {
+      dd.classList.remove('open');
+    }
+  });
   // Allow Enter to pick first result
   inp.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
