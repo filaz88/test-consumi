@@ -8,7 +8,13 @@
 <meta name="apple-mobile-web-app-title" content="EV Route">
 <meta name="theme-color" content="#080c14">
 <title>EV Route Simulator</title>
+
+<!-- Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -31,8 +37,11 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
 .card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,var(--accent),transparent); opacity:0.35; }
 .card-title { font-family:var(--mono); font-size:0.58rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); margin-bottom:1.1rem; }
 
+/* MAP */
 #map { width:100%; height:240px; border-radius:12px; overflow:hidden; background:var(--surface); }
+.leaflet-container { background:#0f1520 !important; }
 
+/* INPUTS */
 .route-wrap { display:flex; flex-direction:column; gap:0.7rem; }
 .input-group { position:relative; }
 .dot { position:absolute; left:0.9rem; top:50%; transform:translateY(-50%); width:9px; height:9px; border-radius:50%; z-index:2; pointer-events:none; }
@@ -42,16 +51,21 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
 .ev-input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(0,212,255,0.07); }
 .ev-input::placeholder { color:var(--muted); font-size:0.82rem; }
 
-.pac-container { background:var(--card)!important; border:1px solid var(--border)!important; border-radius:12px!important; box-shadow:0 8px 32px rgba(0,0,0,0.5)!important; font-family:'Inter',sans-serif!important; margin-top:4px!important; }
-.pac-item { padding:0.65rem 1rem!important; font-size:0.82rem!important; color:var(--text)!important; border-top:1px solid var(--border)!important; cursor:pointer!important; }
-.pac-item:hover { background:var(--surface)!important; }
-.pac-item-query { color:var(--accent)!important; }
-.pac-icon { display:none!important; }
-.pac-matched { color:var(--accent2)!important; font-weight:600!important; }
+/* AUTOCOMPLETE DROPDOWN */
+.ac-wrap { position:relative; }
+.ac-dropdown { position:absolute; top:calc(100% + 4px); left:0; right:0; background:var(--card); border:1px solid var(--border); border-radius:12px; z-index:1000; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.5); display:none; }
+.ac-dropdown.open { display:block; }
+.ac-item { padding:0.7rem 1rem; font-size:0.82rem; color:var(--text); border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.15s; }
+.ac-item:last-child { border-bottom:none; }
+.ac-item:hover { background:var(--surface); }
+.ac-item strong { color:var(--accent); }
+.ac-item small { display:block; font-size:0.68rem; color:var(--muted); margin-top:2px; }
 
+/* PARAMS */
 .params-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; }
 .param-item label { display:block; font-family:var(--mono); font-size:0.55rem; letter-spacing:0.15em; text-transform:uppercase; color:var(--muted); margin-bottom:0.35rem; }
-.param-input { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:10px; color:var(--accent); font-family:var(--mono); font-size:0.88rem; padding:0.65rem 0.8rem; outline:none; -webkit-appearance:none; }
+.param-input { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:10px; color:var(--accent); font-family:var(--mono); font-size:0.88rem; padding:0.65rem 0.8rem; outline:none; -webkit-appearance:none; transition:border-color 0.2s; }
+.param-input:focus { border-color:var(--accent); }
 .param-unit { font-family:var(--mono); font-size:0.55rem; color:var(--muted); margin-top:0.25rem; }
 
 .slider-group { margin-top:0.9rem; }
@@ -60,8 +74,7 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
 .ev-range { width:100%; appearance:none; height:4px; background:var(--border); border-radius:2px; outline:none; cursor:pointer; }
 .ev-range::-webkit-slider-thumb { appearance:none; width:17px; height:17px; background:var(--accent); border-radius:50%; box-shadow:0 0 8px rgba(0,212,255,0.4); cursor:pointer; }
 
-
-
+/* BUTTON */
 .btn-calc { width:100%; background:linear-gradient(135deg,var(--accent),#0099cc); color:#000; font-family:'Syne',sans-serif; font-size:1rem; font-weight:700; letter-spacing:0.05em; border:none; border-radius:14px; padding:1rem; cursor:pointer; transition:opacity 0.2s,transform 0.15s; }
 .btn-calc:hover { opacity:0.9; transform:translateY(-1px); }
 .btn-calc:disabled { opacity:0.55; cursor:not-allowed; transform:none; }
@@ -70,19 +83,20 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
 .spinner { width:24px; height:24px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.7s linear infinite; }
 @keyframes spin { to { transform:rotate(360deg); } }
 
-.error-box { background:rgba(255,60,60,0.07); border:1px solid rgba(255,60,60,0.25); border-radius:12px; padding:1rem; font-size:0.82rem; color:#ff6b6b; display:none; }
+.error-box { background:rgba(255,60,60,0.07); border:1px solid rgba(255,60,60,0.25); border-radius:12px; padding:1rem; font-size:0.82rem; color:#ff6b6b; display:none; line-height:1.5; }
 .error-box.show { display:block; }
 
+/* RESULTS */
 .results { display:none; flex-direction:column; gap:1rem; }
 .results.show { display:flex; }
 
-/* SOC bar */
+/* SOC */
 .soc-wrap { margin-top:0.8rem; }
-.soc-bar-track { width:100%; height:10px; background:var(--border); border-radius:5px; overflow:hidden; position:relative; margin-top:0.5rem; }
+.soc-bar-track { width:100%; height:10px; background:var(--border); border-radius:5px; overflow:hidden; margin-top:0.5rem; }
 .soc-bar-fill { height:100%; border-radius:5px; transition:width 0.8s cubic-bezier(0.4,0,0.2,1); }
 .soc-labels { display:flex; justify-content:space-between; font-family:var(--mono); font-size:0.6rem; color:var(--muted); margin-top:0.3rem; }
 
-/* summary */
+/* SUMMARY */
 .summary-strip { display:grid; grid-template-columns:repeat(3,1fr); gap:0.6rem; }
 .strip-item { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:0.9rem 0.6rem; text-align:center; }
 .strip-val { font-family:'Syne',sans-serif; font-size:1.3rem; font-weight:800; color:var(--accent); line-height:1; }
@@ -91,6 +105,7 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
 .route-bar { font-size:0.8rem; color:var(--muted); margin-bottom:1rem; }
 .route-bar strong { color:var(--text); }
 
+/* COSTS */
 .cost-rows { display:flex; flex-direction:column; gap:0.45rem; }
 .cost-row { display:flex; justify-content:space-between; align-items:center; padding:0.62rem 0.8rem; background:var(--surface); border-radius:10px; }
 .cost-row.total-row { border:1px solid rgba(255,255,255,0.07); }
@@ -98,7 +113,7 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
 .cost-val { font-family:var(--mono); font-size:0.85rem; font-weight:500; }
 .c-energy { color:var(--accent2); } .c-toll { color:var(--warn); } .c-total { color:#fff; font-size:0.95rem; }
 
-/* Supercharger stops */
+/* STOPS */
 .stops-list { display:flex; flex-direction:column; gap:0.6rem; }
 .stop-item { display:flex; gap:0.9rem; padding:0.9rem; background:var(--surface); border-radius:12px; border-left:3px solid var(--tesla); }
 .stop-item.ok { border-left-color:var(--accent2); }
@@ -130,24 +145,33 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
 
 <div class="container">
 
+  <!-- ROUTE -->
   <div class="card">
     <p class="card-title">📍 Percorso</p>
     <div class="route-wrap">
-      <div class="input-group">
-        <div class="dot dot-from"></div>
-        <input id="inp-from" class="ev-input" type="text" placeholder="Partenza (es. Milano)">
+      <div class="ac-wrap">
+        <div class="input-group">
+          <div class="dot dot-from"></div>
+          <input id="inp-from" class="ev-input" type="text" placeholder="Partenza (es. Milano)" autocomplete="off">
+        </div>
+        <div class="ac-dropdown" id="dd-from"></div>
       </div>
-      <div class="input-group">
-        <div class="dot dot-to"></div>
-        <input id="inp-to" class="ev-input" type="text" placeholder="Arrivo (es. Roma)">
+      <div class="ac-wrap">
+        <div class="input-group">
+          <div class="dot dot-to"></div>
+          <input id="inp-to" class="ev-input" type="text" placeholder="Arrivo (es. Roma)" autocomplete="off">
+        </div>
+        <div class="ac-dropdown" id="dd-to"></div>
       </div>
     </div>
   </div>
 
+  <!-- MAP -->
   <div class="card" style="padding:0.8rem">
     <div id="map"></div>
   </div>
 
+  <!-- PARAMETRI AUTO -->
   <div class="card">
     <p class="card-title">🚗 Parametri auto</p>
     <div class="params-grid">
@@ -181,6 +205,7 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
     </div>
   </div>
 
+  <!-- PEDAGGI -->
   <div class="card">
     <p class="card-title">🛣️ Pedaggi autostrada</p>
     <div class="param-item">
@@ -203,237 +228,186 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
   </div>
 
   <div class="results" id="results">
-
     <div class="card">
       <p class="card-title">📊 Riepilogo percorso</p>
       <div class="route-bar" id="route-bar"></div>
       <div class="summary-strip" id="summary-strip"></div>
-      <!-- SOC gauge -->
       <div class="soc-wrap" id="soc-wrap"></div>
     </div>
-
     <div class="card">
       <p class="card-title">💰 Costi stimati</p>
       <div class="cost-rows" id="cost-rows"></div>
     </div>
-
     <div class="card">
       <p class="card-title" style="display:flex;align-items:center;gap:0.5rem">
         <span style="color:var(--tesla)">⚡</span> Supercharger Tesla sul percorso
       </p>
       <div class="stops-list" id="stops-list"></div>
     </div>
-
     <div class="note">
-      <strong>Fonte dati:</strong> Distanza e durata via Google Routes API (percorso reale).
-      Supercharger Tesla: rete italiana reale (~99 siti). La sosta viene consigliata quando il SOC stimato scende sotto la soglia impostata.
-      Pedaggi: calcolati sui km autostradali reali rilevati dal percorso Google Routes (velocità/tipo strada). Il costo Supercharger usa la tariffa media Tesla Italia (~€0,62/kWh).
-      Le soste sono indicative — usa sempre l'app Tesla per la navigazione esatta.
+      <strong>Fonte dati:</strong> Percorso via OpenRouteService (gratuito, open source).
+      Mappa OpenStreetMap. Supercharger Tesla: rete europea live da supercharge.info.
+      Pedaggi stimati sui km autostradali rilevati automaticamente dal percorso.
+      Costo Supercharger: tariffa media Tesla Europa ~€0,62/kWh. Dati indicativi.
     </div>
   </div>
 </div>
 
 <script>
-// ─────────────────────────────────────────────
-// TESLA SUPERCHARGER ITALIA — rete reale
-// lat/lon approssimati per posizionamento sulla mappa
-// kw = potenza massima stall
-// ─────────────────────────────────────────────
-// ── SUPERCHARGER DATA: caricati live da supercharge.info ──
-let SUPERCHARGERS = [];
-let scLoaded = false;
+// ── HELPERS ──
+const fmtE  = n => '€ ' + Number(n).toFixed(2).replace('.',',');
+const fmtH  = s => { const h=Math.floor(s/3600),m=Math.floor((s%3600)/60); return h>0?`${h}h ${m}min`:`${m} min`; };
+const showErr = msg => { const b=document.getElementById('error-box'); b.innerHTML=msg; b.classList.add('show'); };
+const hideErr = ()  => document.getElementById('error-box').classList.remove('show');
+
+// ── LEAFLET MAP ──
+const map = L.map('map', { zoomControl:true, attributionControl:false }).setView([44.5, 11.3], 5);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  maxZoom:19, subdomains:'abcd'
+}).addTo(map);
+
+let routeLayer = null, scMarkersLayer = L.layerGroup().addTo(map);
+
+// ── SUPERCHARGER DATA (live) ──
+let SUPERCHARGERS = [], scLoaded = false;
 
 async function loadSuperchargers() {
   if (scLoaded) return;
   try {
     const res = await fetch('https://supercharge.info/service/supercharge/allSites');
     const all = await res.json();
-    // Filtra: solo Europa + status OPEN
-    const EUROPE_REGIONS = ['Europe'];
     SUPERCHARGERS = all
-      .filter(s =>
-        s.status === 'OPEN' &&
-        s.address?.region &&
-        EUROPE_REGIONS.includes(s.address.region) &&
-        s.gps?.latitude && s.gps?.longitude
-      )
+      .filter(s => s.status === 'OPEN' && s.address?.region === 'Europe' && s.gps?.latitude)
       .map(s => ({
-        name: s.name,
-        addr: [s.address.street, s.address.city, s.address.country].filter(Boolean).join(', '),
-        lat:  s.gps.latitude,
-        lon:  s.gps.longitude,
-        kw:   s.powerKilowatt || 150,
-        stalls: s.stallCount || 4,
+        name:    s.name,
+        addr:    [s.address.street, s.address.city, s.address.country].filter(Boolean).join(', '),
+        lat:     s.gps.latitude,
+        lon:     s.gps.longitude,
+        kw:      s.powerKilowatt || 150,
+        stalls:  s.stallCount    || 4,
         country: s.address.country || '',
       }));
     scLoaded = true;
-    console.log(`✅ Caricati ${SUPERCHARGERS.length} Supercharger europei`);
+    console.log(`✅ ${SUPERCHARGERS.length} Supercharger europei caricati`);
   } catch(e) {
-    console.warn('Fallback al dataset statico:', e);
-    // Fallback minimo Italia
+    console.warn('Fallback SC:', e);
     SUPERCHARGERS = [
-      { name:"Milano (Arese)", addr:"Via G.E. Luraghi 11, Arese, Italy", lat:45.556, lon:9.073, kw:250, stalls:20, country:"Italy" },
-      { name:"Bologna", addr:"Via Arcoveggio 49, Bologna, Italy", lat:44.519, lon:11.352, kw:250, stalls:12, country:"Italy" },
-      { name:"Firenze", addr:"A1 Firenze Nord, Italy", lat:43.830, lon:11.168, kw:250, stalls:12, country:"Italy" },
-      { name:"Roma (Settebagni)", addr:"A1 Settebagni, Rome, Italy", lat:42.059, lon:12.557, kw:250, stalls:12, country:"Italy" },
-      { name:"Napoli", addr:"Via Brecce a Sant'Erasmo, Naples, Italy", lat:40.879, lon:14.291, kw:250, stalls:12, country:"Italy" },
+      { name:'Milano (Arese)',      addr:'Via G.E. Luraghi 11, Arese',  lat:45.556, lon:9.073,  kw:250, stalls:20, country:'Italy' },
+      { name:'Bologna',            addr:'Via Arcoveggio 49',            lat:44.519, lon:11.352, kw:250, stalls:12, country:'Italy' },
+      { name:'Firenze Nord',       addr:'A1 Firenze Nord',              lat:43.830, lon:11.168, kw:250, stalls:12, country:'Italy' },
+      { name:'Roma (Settebagni)',  addr:'A1 Settebagni',                lat:42.059, lon:12.557, kw:250, stalls:12, country:'Italy' },
+      { name:'Napoli',             addr:"Via Brecce a Sant'Erasmo",     lat:40.879, lon:14.291, kw:250, stalls:12, country:'Italy' },
     ];
     scLoaded = true;
   }
 }
 
-
-const SC_RATE = 0.62; // €/kWh media Supercharger Italia
-
-// ─── HELPERS ───
-function fmtE(n)   { return '€ ' + Number(n).toFixed(2).replace('.',','); }
-function fmtH(sec) { const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60); return h>0?`${h}h ${m}min`:`${m} min`; }
-function showErr(msg) { const b=document.getElementById('error-box'); b.textContent=msg; b.classList.add('show'); }
-function hideErr()    { document.getElementById('error-box').classList.remove('show'); }
-
-// Distanza in km tra due lat/lon
-function dist(a, b) {
+// ── HAVERSINE ──
+function haversine(a, b) {
   const R=6371, dLat=(b.lat-a.lat)*Math.PI/180, dLon=(b.lon-a.lon)*Math.PI/180;
   const x=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2;
   return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
 }
 
-// Trova i Supercharger entro maxKm dal percorso (waypoints) e ordinali per distanza dal punto di partenza
-function findSCAlongRoute(waypoints, maxKmOff=25) {
-  if (!waypoints || !waypoints.length) return [];
+// ── FIND SC ALONG ROUTE ──
+function findSCAlongRoute(coords, maxKmOff=25) {
+  if (!coords?.length) return [];
   const found = [];
   SUPERCHARGERS.forEach(sc => {
-    // Trova il waypoint più vicino
-    let minD = Infinity, closestIdx = 0;
-    waypoints.forEach((wp, i) => {
-      const d = dist({ lat: wp.lat(), lon: wp.lng() }, sc);
-      if (d < minD) { minD = d; closestIdx = i; }
+    let minD=Infinity, closestIdx=0;
+    coords.forEach(([lon,lat],i) => {
+      const d = haversine({lat,lon},{lat:sc.lat,lon:sc.lon});
+      if (d < minD) { minD=d; closestIdx=i; }
     });
     if (minD <= maxKmOff) {
-      // Stima distanza progressiva lungo il percorso come % dei waypoints
-      const progressPct = closestIdx / (waypoints.length - 1);
-      found.push({ ...sc, progressPct, deviationKm: minD });
+      found.push({ ...sc, progressPct: closestIdx/(coords.length-1), deviationKm:minD });
     }
   });
-  // Ordina per progressione sul percorso
   found.sort((a,b) => a.progressPct - b.progressPct);
-  // Rimuovi duplicati troppo vicini (entro 20km percorso)
-  const deduped = [];
+  // deduplica
+  const out = [];
   found.forEach(sc => {
-    if (!deduped.length || Math.abs(sc.progressPct - deduped[deduped.length-1].progressPct) > 0.05) {
-      deduped.push(sc);
-    }
+    if (!out.length || Math.abs(sc.progressPct - out[out.length-1].progressPct) > 0.04) out.push(sc);
   });
-  return deduped;
+  return out;
 }
 
-// Calcola quali Supercharger servono come sosta
+// ── PLAN STOPS ──
 function planStops(distKm, cons, bat, socStart, socMin, scList) {
-  const kmPerKwh = 100 / cons;
-  let currentSoc = socStart;
-  let coveredKm  = 0;
+  const socPerKm = cons / bat;
+  let curSoc = socStart, covKm = 0;
   const stops = [];
-  const socPerKm = cons / bat; // % SOC consumata per km
-
   scList.forEach(sc => {
     const scKm = sc.progressPct * distKm;
-    const kmFromLast = scKm - coveredKm;
-    const socAtSC = currentSoc - (kmFromLast * socPerKm);
-
-    if (socAtSC <= socMin + 5) { // scende sotto soglia + buffer 5%
-      const chargeToSoc = 80; // ricarica all'80%
-      const chargeKwh = bat * (chargeToSoc - Math.max(socAtSC, 5)) / 100;
-      const chargeMin = Math.round(chargeKwh / sc.kw * 60);
+    const socAtSC = curSoc - (scKm - covKm) * socPerKm;
+    if (socAtSC <= socMin + 5) {
+      const chargeKwh = bat * (80 - Math.max(socAtSC, 5)) / 100;
       stops.push({
         ...sc,
-        kmOnRoute: Math.round(scKm),
-        socAtArrival: Math.max(Math.round(socAtSC), 5),
-        chargeKwh: Math.round(chargeKwh * 10) / 10,
-        chargeMin,
-        chargeCost: chargeKwh * SC_RATE,
-        socAfterCharge: chargeToSoc,
+        kmOnRoute:      Math.round(scKm),
+        socAtArrival:   Math.max(Math.round(socAtSC), 5),
+        chargeKwh:      Math.round(chargeKwh*10)/10,
+        chargeMin:      Math.round(chargeKwh/sc.kw*60),
+        chargeCost:     chargeKwh * 0.62,
+        socAfterCharge: 80,
       });
-      currentSoc = chargeToSoc;
-      coveredKm = scKm;
+      curSoc = 80; covKm = scKm;
     }
   });
-
-  // SOC finale all'arrivo
-  const remainingKm = distKm - coveredKm;
-  const socAtDest = Math.max(0, currentSoc - (remainingKm * socPerKm));
+  const socAtDest = Math.max(0, curSoc - (distKm - covKm) * socPerKm);
   return { stops, socAtDest: Math.round(socAtDest) };
 }
 
-// ─── SLIDERS ───
+// ── AUTOCOMPLETE (Nominatim) ──
+let acTimers = {};
+function setupAC(inputId, ddId) {
+  const inp = document.getElementById(inputId);
+  const dd  = document.getElementById(ddId);
+  let selected = null;
+
+  inp.addEventListener('input', () => {
+    clearTimeout(acTimers[inputId]);
+    selected = null;
+    const q = inp.value.trim();
+    if (q.length < 3) { dd.classList.remove('open'); dd.innerHTML=''; return; }
+    acTimers[inputId] = setTimeout(async () => {
+      try {
+        const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1`, { headers:{'Accept-Language':'it'} });
+        const data = await r.json();
+        dd.innerHTML = '';
+        if (!data.length) { dd.classList.remove('open'); return; }
+        data.forEach(item => {
+          const el = document.createElement('div');
+          el.className = 'ac-item';
+          const city = item.address?.city||item.address?.town||item.address?.village||'';
+          const country = item.address?.country||'';
+          el.innerHTML = `<strong>${item.display_name.split(',')[0]}</strong><small>${[city,country].filter(Boolean).join(', ')}</small>`;
+          el.addEventListener('mousedown', e => {
+            e.preventDefault();
+            inp.value = item.display_name.split(',')[0] + (city ? ', '+city : '');
+            selected = { lat:parseFloat(item.lat), lon:parseFloat(item.lon), name:inp.value };
+            dd.classList.remove('open'); dd.innerHTML='';
+          });
+          dd.appendChild(el);
+        });
+        dd.classList.add('open');
+      } catch(e) { dd.classList.remove('open'); }
+    }, 350);
+  });
+
+  inp.addEventListener('blur', () => setTimeout(()=>dd.classList.remove('open'), 200));
+  inp._sel = () => selected;
+}
+
+setupAC('inp-from','dd-from');
+setupAC('inp-to','dd-to');
+
+// ── SLIDER ──
 document.getElementById('sl-kwh').addEventListener('input', function() {
   document.getElementById('lbl-kwh').textContent = '€ ' + parseFloat(this.value).toFixed(2).replace('.',',') + '/kWh';
 });
 
-
-// ─── GOOGLE MAPS ───
-let map, directionsService, directionsRenderer, autocompleteFrom, autocompleteTo;
-
-function initMap() {
-  map = new google.maps.Map(document.getElementById('map'), {
-    center: { lat: 42.5, lng: 12.5 },
-    zoom: 5,
-    mapTypeId: 'roadmap',
-    styles: [
-      { elementType:'geometry', stylers:[{color:'#0f1520'}] },
-      { elementType:'labels.text.fill', stylers:[{color:'#5a7094'}] },
-      { elementType:'labels.text.stroke', stylers:[{color:'#080c14'}] },
-      { featureType:'road', elementType:'geometry', stylers:[{color:'#1e2d45'}] },
-      { featureType:'road.highway', elementType:'geometry', stylers:[{color:'#1a3a5c'}] },
-      { featureType:'road.highway', elementType:'geometry.stroke', stylers:[{color:'#0d2a45'}] },
-      { featureType:'water', elementType:'geometry', stylers:[{color:'#080c14'}] },
-      { featureType:'poi', stylers:[{visibility:'off'}] },
-      { featureType:'transit', stylers:[{visibility:'off'}] },
-      { featureType:'landscape', elementType:'geometry', stylers:[{color:'#0d1625'}] },
-    ]
-  });
-
-  directionsService  = new google.maps.DirectionsService();
-  directionsRenderer = new google.maps.DirectionsRenderer({
-    suppressMarkers: false,
-    polylineOptions: { strokeColor:'#00d4ff', strokeWeight:4, strokeOpacity:0.85 }
-  });
-  directionsRenderer.setMap(map);
-
-  const opts = { componentRestrictions:{ country:'it' }, fields:['geometry','name','formatted_address'] };
-  autocompleteFrom = new google.maps.places.Autocomplete(document.getElementById('inp-from'), opts);
-  autocompleteTo   = new google.maps.places.Autocomplete(document.getElementById('inp-to'), opts);
-}
-
-// ─── SUPERCHARGER MARKERS ───
-let scMarkers = [];
-function clearSCMarkers() { scMarkers.forEach(m => m.setMap(null)); scMarkers = []; }
-function addSCMarker(sc, isStop) {
-  const marker = new google.maps.Marker({
-    position: { lat: sc.lat, lng: sc.lon },
-    map,
-    title: sc.name,
-    icon: {
-      path: google.maps.SymbolPath.CIRCLE,
-      scale: isStop ? 9 : 6,
-      fillColor: isStop ? '#e8263a' : '#ff6b6b',
-      fillOpacity: isStop ? 1 : 0.5,
-      strokeColor: '#fff',
-      strokeWeight: isStop ? 2 : 1,
-    },
-    zIndex: isStop ? 10 : 5,
-  });
-  const info = new google.maps.InfoWindow({
-    content: `<div style="background:#131b2a;color:#e2eaf5;padding:0.5rem;border-radius:8px;font-family:sans-serif;font-size:12px">
-      <strong style="color:#e8263a">⚡ ${sc.name}</strong><br>
-      <span style="color:#5a7094">${sc.addr}</span><br>
-      <span style="color:#00ff9d">${sc.stalls} stall · max ${sc.kw} kW</span>
-    </div>`
-  });
-  marker.addListener('click', () => info.open(map, marker));
-  scMarkers.push(marker);
-}
-
-// ─── MAIN CALC ───
+// ── MAIN CALC ──
 document.getElementById('btn-calc').addEventListener('click', async () => {
   hideErr();
   document.getElementById('results').classList.remove('show');
@@ -443,106 +417,116 @@ document.getElementById('btn-calc').addEventListener('click', async () => {
   const fromVal = document.getElementById('inp-from').value.trim();
   const toVal   = document.getElementById('inp-to').value.trim();
   if (!fromVal || !toVal) {
-    showErr('Inserisci partenza e arrivo.');
-    document.getElementById('loading-box').style.display = 'none';
-    document.getElementById('btn-calc').disabled = false;
+    showErr('Inserisci partenza e arrivo.'); 
+    document.getElementById('loading-box').style.display='none';
+    document.getElementById('btn-calc').disabled=false;
     return;
   }
 
-  const cons     = parseFloat(document.getElementById('p-cons').value) || 16;
-  const bat      = parseFloat(document.getElementById('p-bat').value)  || 75;
-  const socStart = parseFloat(document.getElementById('p-soc').value)  || 80;
-  const socMin   = parseFloat(document.getElementById('p-min').value)  || 15;
-  const kwh      = parseFloat(document.getElementById('sl-kwh').value) || 0.50;
-  const tollRate = parseFloat(document.getElementById('p-toll').value) || 0.075;
+  const cons     = parseFloat(document.getElementById('p-cons').value)||16;
+  const bat      = parseFloat(document.getElementById('p-bat').value)||75;
+  const socStart = parseFloat(document.getElementById('p-soc').value)||80;
+  const socMin   = parseFloat(document.getElementById('p-min').value)||15;
+  const kwh      = parseFloat(document.getElementById('sl-kwh').value)||0.50;
+  const tollRate = parseFloat(document.getElementById('p-toll').value)||0.075;
 
-  const fromPlace = autocompleteFrom.getPlace();
-  const toPlace   = autocompleteTo.getPlace();
-  const origin      = fromPlace?.geometry ? fromPlace.geometry.location : fromVal;
-  const destination = toPlace?.geometry   ? toPlace.geometry.location   : toVal;
-
-  await loadSuperchargers();
-  directionsService.route({
-    origin, destination,
-    travelMode: google.maps.TravelMode.DRIVING,
-    region: 'it',
-  }, (result, status) => {
-    document.getElementById('loading-box').style.display = 'none';
-    document.getElementById('btn-calc').disabled = false;
-
-    if (status !== 'OK') {
-      showErr('Impossibile calcolare il percorso: ' + status + '. Seleziona le città dal menu a tendina.');
-      return;
+  try {
+    // 1. Geocode if needed
+    async function geocode(q) {
+      const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`,{headers:{'Accept-Language':'it'}});
+      const d = await r.json();
+      if (!d.length) throw new Error(`Città non trovata: "${q}"`);
+      return { lat:parseFloat(d[0].lat), lon:parseFloat(d[0].lon), name:d[0].display_name.split(',')[0] };
     }
 
-    directionsRenderer.setDirections(result);
+    const fromSel = document.getElementById('inp-from')._sel();
+    const toSel   = document.getElementById('inp-to')._sel();
+    const from = fromSel || await geocode(fromVal);
+    const to   = toSel   || await geocode(toVal);
 
-    const leg     = result.routes[0].legs[0];
-    const distKm  = leg.distance.value / 1000;
-    const durSec  = leg.duration.value;
+    // 2. OpenRouteService routing
+    const ORS_KEY = '5b3ce3597851110001cf624888c1c3a5c6a74f92b73e9f6f9d3a2c66';
+    const orsRes = await fetch(
+      `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${ORS_KEY}&start=${from.lon},${from.lat}&end=${to.lon},${to.lat}`
+    );
+    if (!orsRes.ok) throw new Error(`OpenRouteService: ${orsRes.status}`);
+    const orsData = await orsRes.json();
+    const seg   = orsData?.features?.[0]?.properties?.segments?.[0];
+    const geom  = orsData?.features?.[0]?.geometry?.coordinates; // [lon,lat]
+    if (!seg) throw new Error('Percorso non trovato. Prova con città diverse.');
 
-    // Waypoints lungo il percorso per trovare i Supercharger
-    const path = result.routes[0].overview_path;
+    const distKm = seg.distance / 1000;
+    const durSec = seg.duration;
+    const steps  = seg.steps || [];
 
-    // Costi
-    const totalKwh   = (cons / 100) * distKm;
-    const energyCost = totalKwh * kwh;
-    // Calcola km autostradali reali dai steps di Google Routes
-    // Le highway hanno speed limit alto (>80km/h stimato) o keyword nel testo
+    // 3. Draw route on map
+    if (routeLayer) map.removeLayer(routeLayer);
+    scMarkersLayer.clearLayers();
+
+    const latLngs = geom.map(([lon,lat]) => [lat,lon]);
+    routeLayer = L.polyline(latLngs, { color:'#00d4ff', weight:4, opacity:0.85 }).addTo(map);
+
+    // Markers partenza/arrivo
+    const iconFrom = L.divIcon({ html:'<div style="width:12px;height:12px;background:#00ff9d;border-radius:50%;border:2px solid #fff;box-shadow:0 0 8px #00ff9d"></div>', iconAnchor:[6,6], className:'' });
+    const iconTo   = L.divIcon({ html:'<div style="width:12px;height:12px;background:#00d4ff;border-radius:50%;border:2px solid #fff;box-shadow:0 0 8px #00d4ff"></div>', iconAnchor:[6,6], className:'' });
+    L.marker([from.lat,from.lon],{icon:iconFrom}).bindPopup(`<b>Partenza:</b> ${from.name}`).addTo(scMarkersLayer);
+    L.marker([to.lat,to.lon],{icon:iconTo}).bindPopup(`<b>Arrivo:</b> ${to.name}`).addTo(scMarkersLayer);
+    map.fitBounds(routeLayer.getBounds(), {padding:[20,20]});
+
+    // 4. Calcola km autostradali dai steps ORS
+    // ORS steps hanno "type" e "name" — cerchiamo strade veloci o con nome da autostrada
     let hwKm = 0;
-    leg.steps.forEach(step => {
-      const instr = (step.instructions || '').toLowerCase();
-      const isHighway = /\bautostrada\b|\ba\d+\b|\bss\d+\b dir|motorway|highway|freeway|autoroute|autobahn|autopista|\be\d+\b/.test(instr)
-        || (step.distance.value > 5000 && step.duration.value > 0 && (step.distance.value / step.duration.value) > 22); // >80 km/h
-      if (isHighway) hwKm += step.distance.value / 1000;
+    steps.forEach(s => {
+      const nm = (s.name||'').toLowerCase();
+      const isHw = /\ba\d+\b|\bss\d+\b|\bmotorway\b|\bautobahn\b|\bautostrada\b|\bautoroute\b|\bautopista\b|\be\d+\b/.test(nm)
+        || (s.distance > 8000 && s.duration > 0 && (s.distance/s.duration) > 22);
+      if (isHw) hwKm += s.distance/1000;
     });
     hwKm = Math.round(hwKm);
-    const tollCost = hwKm * tollRate;
 
-    // Supercharger vicini al percorso
-    clearSCMarkers();
-    const scNearby = findSCAlongRoute(path, 30);
-    scNearby.forEach(sc => addSCMarker(sc, false));
+    // 5. Supercharger
+    await loadSuperchargers();
+    const scNearby = findSCAlongRoute(geom, 30);
 
-    // Piano soste
+    // Aggiungi marker SC sulla mappa
+    const scIcon = L.divIcon({ html:'<div style="width:10px;height:10px;background:#e8263a;border-radius:50%;border:2px solid #fff;box-shadow:0 0 6px #e8263a"></div>', iconAnchor:[5,5], className:'' });
+    const scIconStop = L.divIcon({ html:'<div style="width:14px;height:14px;background:#e8263a;border-radius:50%;border:2px solid #fff;box-shadow:0 0 10px #e8263a"></div>', iconAnchor:[7,7], className:'' });
+
     const { stops, socAtDest } = planStops(distKm, cons, bat, socStart, socMin, scNearby);
-    stops.forEach(s => addSCMarker(s, true));
+    const stopIds = new Set(stops.map(s=>s.name));
 
-    // Costo totale soste
-    const totalStopCost = stops.reduce((sum, s) => sum + s.chargeCost, 0);
-    const totalCost     = energyCost + tollCost + totalStopCost;
+    scNearby.forEach(sc => {
+      const icon = stopIds.has(sc.name) ? scIconStop : scIcon;
+      L.marker([sc.lat,sc.lon],{icon})
+       .bindPopup(`<b style="color:#e8263a">⚡ ${sc.name}</b><br><small>${sc.addr}</small><br><span style="color:#00ff9d">${sc.stalls} stall · ${sc.kw} kW</span>`)
+       .addTo(scMarkersLayer);
+    });
+
+    // 6. Costi
+    const totalKwh   = (cons/100) * distKm;
+    const energyCost = totalKwh * kwh;
+    const tollCost   = hwKm * tollRate;
+    const stopCost   = stops.reduce((s,x)=>s+x.chargeCost, 0);
+    const totalCost  = energyCost + tollCost + stopCost;
 
     // ── RENDER ──
-    const fromName = leg.start_address.split(',')[0];
-    const toName   = leg.end_address.split(',')[0];
-
     document.getElementById('route-bar').innerHTML =
-      `<strong>${fromName}</strong> <span style="color:var(--border)">→</span> <strong>${toName}</strong>`;
+      `<strong>${from.name}</strong> <span style="color:var(--border)">→</span> <strong>${to.name}</strong>`;
 
     document.getElementById('summary-strip').innerHTML = `
       <div class="strip-item"><div class="strip-val">${Math.round(distKm).toLocaleString('it-IT')}</div><div class="strip-label">km totali</div></div>
       <div class="strip-item"><div class="strip-val">${fmtH(durSec)}</div><div class="strip-label">durata guida</div></div>
-      <div class="strip-item"><div class="strip-val">${totalKwh.toFixed(0)}</div><div class="strip-label">kWh consumati</div></div>
-    `;
+      <div class="strip-item"><div class="strip-val">${totalKwh.toFixed(0)}</div><div class="strip-label">kWh consumati</div></div>`;
 
-    // SOC gauge
-    const socColor = socAtDest >= 30 ? '#00ff9d' : socAtDest >= 15 ? '#ffb300' : '#e8263a';
+    const socColor = socAtDest>=30?'#00ff9d':socAtDest>=15?'#ffb300':'#e8263a';
     document.getElementById('soc-wrap').innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.3rem">
         <span style="font-family:var(--mono);font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted)">SOC stimato all'arrivo</span>
         <span style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:${socColor}">${socAtDest}%</span>
       </div>
-      <div class="soc-bar-track">
-        <div class="soc-bar-fill" style="width:${Math.min(socAtDest,100)}%;background:${socColor}"></div>
-      </div>
-      <div class="soc-labels">
-        <span>0%</span>
-        <span style="color:var(--warn)">Soglia min ${socMin}%</span>
-        <span>100%</span>
-      </div>
-    `;
+      <div class="soc-bar-track"><div class="soc-bar-fill" style="width:${Math.min(socAtDest,100)}%;background:${socColor}"></div></div>
+      <div class="soc-labels"><span>0%</span><span style="color:var(--warn)">Min ${socMin}%</span><span>100%</span></div>`;
 
-    // Costi
     let costHTML = `
       <div class="cost-row">
         <span class="cost-label">⚡ Energia (${totalKwh.toFixed(1)} kWh × €${kwh.toFixed(2).replace('.',',')})</span>
@@ -550,13 +534,13 @@ document.getElementById('btn-calc').addEventListener('click', async () => {
       </div>`;
     if (hwKm > 0) costHTML += `
       <div class="cost-row">
-        <span class="cost-label">🛣️ Pedaggi stimati (${hwKm} km autostrada · ${Math.round(hwKm/distKm*100)}% del percorso)</span>
+        <span class="cost-label">🛣️ Pedaggi (${hwKm} km autostrada · ${Math.round(hwKm/distKm*100)}%)</span>
         <span class="cost-val c-toll">${fmtE(tollCost)}</span>
       </div>`;
     if (stops.length) costHTML += `
       <div class="cost-row">
-        <span class="cost-label">🔴 Supercharger (${stops.length} sosta${stops.length>1?'e':''} · €${SC_RATE.toFixed(2)}/kWh)</span>
-        <span class="cost-val" style="color:var(--tesla)">${fmtE(totalStopCost)}</span>
+        <span class="cost-label">🔴 Supercharger (${stops.length} sosta${stops.length>1?'e':''} · €0,62/kWh)</span>
+        <span class="cost-val" style="color:var(--tesla)">${fmtE(stopCost)}</span>
       </div>`;
     costHTML += `
       <div class="cost-row total-row">
@@ -569,21 +553,19 @@ document.getElementById('btn-calc').addEventListener('click', async () => {
       </div>`;
     document.getElementById('cost-rows').innerHTML = costHTML;
 
-    // Supercharger stops
+    // Stops
     const sl = document.getElementById('stops-list');
     if (!stops.length) {
       sl.innerHTML = `<div class="stop-item ok">
         <div class="stop-icon">✅</div>
         <div>
           <div class="stop-name">Nessuna sosta necessaria</div>
-          <div class="stop-detail">SOC all'arrivo stimato: <span>${socAtDest}%</span> — sufficiente per i ${Math.round(distKm)} km del percorso</div>
+          <div class="stop-detail">SOC all'arrivo: <span>${socAtDest}%</span> — sufficiente per i ${Math.round(distKm)} km del percorso
+          ${scNearby.length ? `<br>${scNearby.length} Supercharger trovati lungo il percorso (punti rossi sulla mappa)` : ''}</div>
         </div>
-      </div>
-      ${scNearby.length ? `<div style="font-family:var(--mono);font-size:0.6rem;color:var(--muted);padding:0.5rem;margin-top:0.3rem">
-        ${scNearby.length} Supercharger trovati lungo il percorso (segnati sulla mappa in rosso)
-      </div>` : ''}`;
+      </div>`;
     } else {
-      sl.innerHTML = stops.map((s, i) => `
+      sl.innerHTML = stops.map((s,i) => `
         <div class="stop-item">
           <div class="stop-icon">🔴</div>
           <div style="flex:1">
@@ -592,7 +574,7 @@ document.getElementById('btn-calc').addEventListener('click', async () => {
             <div class="stop-addr">${s.addr}</div>
             <div class="stop-detail">
               Al km <span>${s.kmOnRoute.toLocaleString('it-IT')}</span> ·
-              SOC arrivo: <span class="${s.socAtArrival < socMin ? 'tesla-red' : ''}">${s.socAtArrival}%</span><br>
+              SOC arrivo: <span class="${s.socAtArrival<socMin?'tesla-red':''}">${s.socAtArrival}%</span><br>
               Ricarica fino a <span>80%</span> → <span>${s.chargeKwh} kWh</span> ·
               Tempo: <span>~${s.chargeMin} min</span> (${s.kw} kW) ·
               Costo: <span>${fmtE(s.chargeCost)}</span>
@@ -602,10 +584,14 @@ document.getElementById('btn-calc').addEventListener('click', async () => {
     }
 
     document.getElementById('results').classList.add('show');
-  });
+
+  } catch(e) {
+    showErr('❌ ' + e.message);
+  } finally {
+    document.getElementById('loading-box').style.display='none';
+    document.getElementById('btn-calc').disabled=false;
+  }
 });
 </script>
-
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDSc-MKc4JmEhNeTcLfEcEtzSd1Cdvky2Y&libraries=places&callback=initMap" async defer></script>
 </body>
 </html>
