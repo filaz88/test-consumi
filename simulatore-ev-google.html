@@ -223,6 +223,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:15
   <button id="btn-test" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:var(--heading);font-size:0.68rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;border-radius:10px;padding:0.6rem;cursor:pointer">
     🔧 Test connessione servizi
   </button>
+  <div id="test-results" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;font-family:var(--mono);font-size:0.72rem;line-height:2;color:var(--text)"></div>
 
   <div class="error-box" id="error-box"></div>
 
@@ -564,41 +565,73 @@ function setupAC(inputId,ddId) {
     dd.classList.add('open');
     acTimers[inputId]=setTimeout(async()=>{
       if(q!==currentQuery) return;
-      try {
-        // Photon (no CORS issues, no custom headers needed)
-        const r=await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=10&lang=it&lat=45&lon=12&location_bias_scale=0.5`);
-        if(!r.ok) throw new Error('photon '+r.status);
-        const data=await r.json();
-        if(q!==currentQuery) return;
-        if(data?.features?.length) { showItems(data.features); return; }
-        throw new Error('no results');
-      } catch(e1) {
-        // Fallback Nominatim (senza User-Agent custom)
-        try {
-          const r2=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=8&addressdetails=1&accept-language=it`);
-          const d2=await r2.json();
-          if(q!==currentQuery) return;
-          const features=(d2||[]).map(item=>{
-            const a=item.address||{};
-            return {
-              geometry:{coordinates:[parseFloat(item.lon),parseFloat(item.lat)]},
-              properties:{
-                name:a.city||a.town||a.village||a.hamlet||item.display_name.split(',')[0],
-                city:a.city||a.town||a.village||'',country:a.country||'',state:a.state||'',
-                street:a.road||'',housenumber:a.house_number||'',
-                osm_value:item.addresstype||item.type||'city',osm_key:item.class||'',
-              }
-            };
-          });
-          showItems(features);
-        } catch(e2) {
-          if(q===currentQuery) {
-            dd.innerHTML='<div class="ac-item" style="color:#ff6b6b">❌ Errore di rete</div>';
-            dd.classList.add('open');
+
+      // Converte risultato Nominatim in formato interno
+      function nmToFeature(item) {
+        const a=item.address||{};
+        return {
+          geometry:{coordinates:[parseFloat(item.lon),parseFloat(item.lat)]},
+          properties:{
+            name:a.city||a.town||a.village||a.hamlet||item.display_name.split(',')[0],
+            city:a.city||a.town||a.village||'',
+            country:a.country||'',state:a.state||'',
+            street:a.road||'',housenumber:a.house_number||'',
+            osm_value:item.addresstype||item.type||'city',osm_key:item.class||'',
           }
-        }
+        };
       }
-    },250);
+
+      // Tenta le API in sequenza, usa la prima che risponde
+      // Per query corte (< 4 char) aggiungi spazio per forzare prefix match
+      const searchQ = q.length < 4 ? q + ' ' : q;
+
+      const apis = [
+        // 1. Photon — supporta prefix search nativamente, ottimo per query corte
+        async () => {
+          const r=await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(searchQ)}&limit=10&lang=it&lat=44&lon=12&location_bias_scale=0.6`,
+            {signal:AbortSignal.timeout(5000)});
+          if(!r.ok) throw new Error('photon '+r.status);
+          const d=await r.json();
+          if(!d?.features?.length) throw new Error('no results');
+          return d.features;
+        },
+        // 2. Nominatim con autocomplete=1 — supporta prefix search
+        async () => {
+          const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQ)}&format=json&limit=8&addressdetails=1&accept-language=it&featuretype=city`,
+            {signal:AbortSignal.timeout(5000)});
+          if(!r.ok) throw new Error('nm '+r.status);
+          const d=await r.json();
+          if(!d?.length) throw new Error('no results');
+          return d.map(nmToFeature);
+        },
+        // 3. Nominatim generico — fallback senza featuretype
+        async () => {
+          const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQ)}&format=json&limit=8&addressdetails=1&accept-language=it`,
+            {signal:AbortSignal.timeout(6000)});
+          if(!r.ok) throw new Error('nm2 '+r.status);
+          const d=await r.json();
+          if(!d?.length) throw new Error('no results');
+          return d.map(nmToFeature);
+        }
+      ];
+
+      let success=false;
+      for(const api of apis) {
+        if(q!==currentQuery) return;
+        try {
+          const features=await api();
+          if(q!==currentQuery) return;
+          showItems(features);
+          success=true;
+          break;
+        } catch(e) { /* prova prossima */ }
+      }
+
+      if(!success && q===currentQuery) {
+        dd.innerHTML='<div class="ac-item" style="color:#ff6b6b">❌ Servizio non disponibile — riprova tra qualche secondo</div>';
+        dd.classList.add('open');
+      }
+    },300);
   });
 
   inp.addEventListener('keydown',e=>{
@@ -653,7 +686,7 @@ document.getElementById('btn-geo').addEventListener('click',async()=>{
     geoMarker=L.marker([lat,lon],{icon:geoIcon}).bindPopup('<b>📍 Sei qui</b>').addTo(map);
     map.setView([lat,lon],12);
     try {
-      const r=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=it`);
+      const r=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=it`,{signal:AbortSignal.timeout(5000)});
       const d=await r.json();
       const city=d.address?.city||d.address?.town||d.address?.village||'';
       const country=d.address?.country||'';
@@ -1202,20 +1235,25 @@ function sendToTesla(lat, lon, name) {
 }
 
 // ── TEST BUTTON ──
-document.getElementById('btn-test').addEventListener('click',async()=>{
-  const box=document.getElementById('error-box');
-  box.style.display='block';box.classList.add('show');
-  box.innerHTML='Test in corso…';
-  const results=[];
-  const test=async(name,url)=>{
-    try{const r=await fetch(url);results.push(`${r.ok?'✅':'⚠️'} ${name}: HTTP ${r.status}`);}
-    catch(e){results.push(`❌ ${name}: ${e.message}`);}
+document.getElementById('btn-test').addEventListener('click', async () => {
+  const box = document.getElementById('test-results');
+  box.style.display = 'block';
+  box.innerHTML = '⏳ Test in corso…';
+  const results = [];
+  const test = async (name, url) => {
+    try {
+      const r = await fetch(url, {signal: AbortSignal.timeout(6000)});
+      results.push(`${r.ok ? '✅' : '⚠️'} ${name}: HTTP ${r.status}`);
+    } catch(e) {
+      results.push(`❌ ${name}: ${e.message}`);
+    }
+    box.innerHTML = results.join('<br>');
   };
-  await test('Photon','https://photon.komoot.io/api/?q=Milano&limit=1');
-  await test('Nominatim','https://nominatim.openstreetmap.org/search?q=Roma&format=json&limit=1');
-  await test('OSRM','https://router.project-osrm.org/route/v1/driving/9.19,45.46;12.49,41.89?overview=false');
-  await test('Supercharge.info','https://supercharge.info/service/supercharge/allSites');
-  box.innerHTML=results.join('<br>');
+  await test('Photon geocoding',      'https://photon.komoot.io/api/?q=Milano&limit=1');
+  await test('Nominatim geocoding',   'https://nominatim.openstreetmap.org/search?q=Roma&format=json&limit=1');
+  await test('OSRM routing',          'https://router.project-osrm.org/route/v1/driving/9.19,45.46;12.49,41.89?overview=false');
+  await test('Supercharge.info',      'https://supercharge.info/service/supercharge/allSites');
+  await test('Overpass (parcheggi)', 'https://overpass-api.de/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5Bamenity%3Dparking%5D(45.46,9.18,45.47,9.19)%3Bout+1%3B');
 });
 
 // ── SW ──
