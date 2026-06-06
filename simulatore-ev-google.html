@@ -372,20 +372,24 @@ function setupAC(inputId, ddId) {
     if (q.length < 3) { dd.classList.remove('open'); dd.innerHTML=''; return; }
     acTimers[inputId] = setTimeout(async () => {
       try {
-        const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1`, { headers:{'Accept-Language':'it','User-Agent':'EV-Route-Simulator/1.0'} });
+        const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5&lang=it`);
         const data = await r.json();
+        const features = data?.features || [];
         dd.innerHTML = '';
-        if (!data.length) { dd.classList.remove('open'); return; }
-        data.forEach(item => {
+        if (!features.length) { dd.classList.remove('open'); return; }
+        features.forEach(item => {
+          const p = item.properties;
+          const city    = p.city || p.name || '';
+          const country = p.country || '';
+          const state   = p.state || '';
+          const label   = [city, state, country].filter(Boolean).join(', ');
           const el = document.createElement('div');
           el.className = 'ac-item';
-          const city = item.address?.city||item.address?.town||item.address?.village||'';
-          const country = item.address?.country||'';
-          el.innerHTML = `<strong>${item.display_name.split(',')[0]}</strong><small>${[city,country].filter(Boolean).join(', ')}</small>`;
+          el.innerHTML = `<strong>${city || p.name}</strong><small>${[state,country].filter(Boolean).join(', ')}</small>`;
           el.addEventListener('mousedown', e => {
             e.preventDefault();
-            inp.value = item.display_name.split(',')[0] + (city ? ', '+city : '');
-            selected = { lat:parseFloat(item.lat), lon:parseFloat(item.lon), name:inp.value };
+            inp.value = label;
+            selected = { lat: item.geometry.coordinates[1], lon: item.geometry.coordinates[0], name: city || p.name };
             dd.classList.remove('open'); dd.innerHTML='';
           });
           dd.appendChild(el);
@@ -431,10 +435,14 @@ document.getElementById('btn-calc').addEventListener('click', async () => {
   const tollRate = parseFloat(document.getElementById('p-toll').value)||0.075;
 
   const geocode = async q => {
-    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`,{headers:{'Accept-Language':'it','User-Agent':'EV-Route-Simulator/1.0'}});
+    // Photon (Komoot) — CORS ok, gratuito
+    const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=1&lang=it`);
     const d = await r.json();
-    if (!d.length) throw new Error(`Città non trovata: "${q}". Seleziona dal menu a tendina.`);
-    return { lat:parseFloat(d[0].lat), lon:parseFloat(d[0].lon), name:d[0].display_name.split(',')[0] };
+    const f = d?.features?.[0];
+    if (!f) throw new Error(`Città non trovata: "${q}". Seleziona dal menu a tendina.`);
+    const props = f.properties;
+    const name = props.city || props.name || props.state || q;
+    return { lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0], name };
   };
 
   try {
@@ -446,14 +454,21 @@ document.getElementById('btn-calc').addEventListener('click', async () => {
 
     // 2. OpenRouteService routing
     const ORS_KEY = '5b3ce3597851110001cf624888c1c3a5c6a74f92b73e9f6f9d3a2c66';
-    const orsRes = await fetch(
-      `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${ORS_KEY}&start=${from.lon},${from.lat}&end=${to.lon},${to.lat}`
-    );
-    if (!orsRes.ok) throw new Error(`Errore calcolo percorso (${orsRes.status}). Riprova tra qualche secondo o scegli città diverse.`);
-    const orsData = await orsRes.json();
+    // OpenRouteService — retry once on failure
+    const orsUrl = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${ORS_KEY}&start=${from.lon},${from.lat}&end=${to.lon},${to.lat}`;
+    let orsData;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const orsRes = await fetch(orsUrl);
+      if (orsRes.ok) { orsData = await orsRes.json(); break; }
+      if (attempt === 2) {
+        const errJson = await orsRes.json().catch(()=>({}));
+        throw new Error(`Calcolo percorso non riuscito (${orsRes.status}): ${errJson?.error?.message || 'riprova tra qualche secondo'}`);
+      }
+      await new Promise(r => setTimeout(r, 1500)); // wait 1.5s before retry
+    }
     const seg   = orsData?.features?.[0]?.properties?.segments?.[0];
-    const geom  = orsData?.features?.[0]?.geometry?.coordinates; // [lon,lat]
-    if (!seg) throw new Error('Percorso non trovato. Prova con città diverse.');
+    const geom  = orsData?.features?.[0]?.geometry?.coordinates;
+    if (!seg || !geom) throw new Error('Percorso non trovato. Prova con città diverse.');
 
     const distKm = seg.distance / 1000;
     const durSec = seg.duration;
