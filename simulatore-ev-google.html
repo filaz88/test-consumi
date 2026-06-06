@@ -249,7 +249,7 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
       <div class="stops-list" id="stops-list"></div>
     </div>
     <div class="note">
-      <strong>Fonte dati:</strong> Percorso via OpenRouteService (gratuito, open source).
+      <strong>Fonte dati:</strong> Percorso via OSRM (Open Source Routing Machine, gratuito).
       Mappa OpenStreetMap. Supercharger Tesla: rete europea live da supercharge.info.
       Pedaggi stimati sui km autostradali rilevati automaticamente dal percorso.
       Costo Supercharger: tariffa media Tesla Europa ~€0,62/kWh. Dati indicativi.
@@ -485,26 +485,19 @@ document.getElementById('btn-calc').addEventListener('click', async () => {
     const to   = toSel   || await geocode(toVal);
 
     // 2. OpenRouteService routing
-    const ORS_KEY = '5b3ce3597851110001cf624888c1c3a5c6a74f92b73e9f6f9d3a2c66';
-    // OpenRouteService — retry once on failure
-    const orsUrl = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${ORS_KEY}&start=${from.lon},${from.lat}&end=${to.lon},${to.lat}`;
-    let orsData;
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      const orsRes = await fetch(orsUrl);
-      if (orsRes.ok) { orsData = await orsRes.json(); break; }
-      if (attempt === 2) {
-        const errJson = await orsRes.json().catch(()=>({}));
-        throw new Error(`Calcolo percorso non riuscito (${orsRes.status}): ${errJson?.error?.message || 'riprova tra qualche secondo'}`);
-      }
-      await new Promise(r => setTimeout(r, 1500)); // wait 1.5s before retry
-    }
-    const seg   = orsData?.features?.[0]?.properties?.segments?.[0];
-    const geom  = orsData?.features?.[0]?.geometry?.coordinates;
-    if (!seg || !geom) throw new Error('Percorso non trovato. Prova con città diverse.');
+    // OSRM — gratuito, no key, CORS ok
+    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${from.lon},${from.lat};${to.lon},${to.lat}?overview=full&geometries=geojson&steps=true&annotations=false`;
+    const osrmRes = await fetch(osrmUrl);
+    if (!osrmRes.ok) throw new Error(`Routing non disponibile (${osrmRes.status}). Riprova.`);
+    const osrmData = await osrmRes.json();
+    if (osrmData.code !== 'Ok' || !osrmData.routes?.length) throw new Error('Percorso non trovato. Prova con città diverse.');
 
-    const distKm = seg.distance / 1000;
-    const durSec = seg.duration;
-    const steps  = seg.steps || [];
+    const route  = osrmData.routes[0];
+    const leg    = route.legs[0];
+    const distKm = route.distance / 1000;
+    const durSec = route.duration;
+    const geom   = route.geometry.coordinates; // [lon, lat]
+    const steps  = leg.steps || [];
 
     // 3. Draw route on map
     if (routeLayer) map.removeLayer(routeLayer);
@@ -520,14 +513,16 @@ document.getElementById('btn-calc').addEventListener('click', async () => {
     L.marker([to.lat,to.lon],{icon:iconTo}).bindPopup(`<b>Arrivo:</b> ${to.name}`).addTo(scMarkersLayer);
     map.fitBounds(routeLayer.getBounds(), {padding:[20,20]});
 
-    // 4. Calcola km autostradali dai steps ORS
-    // ORS steps hanno "type" e "name" — cerchiamo strade veloci o con nome da autostrada
+    // 4. Calcola km autostradali dai steps OSRM
+    // OSRM: step.name = nome strada, step.ref = codice (A1, E45...), step.distance in metri
     let hwKm = 0;
     steps.forEach(s => {
-      const nm = (s.name||'').toLowerCase();
-      const isHw = /\ba\d+\b|\bss\d+\b|\bmotorway\b|\bautobahn\b|\bautostrada\b|\bautoroute\b|\bautopista\b|\be\d+\b/.test(nm)
-        || (s.distance > 8000 && s.duration > 0 && (s.distance/s.duration) > 22);
-      if (isHw) hwKm += s.distance/1000;
+      const nm  = (s.name||'').toLowerCase();
+      const ref = (s.ref||'').toLowerCase();
+      const isHw = /motorway|trunk/.test(s.maneuver?.type||'')
+        || /\ba\d+\b|\be\d+\b|\bautostrada\b|\bautoroute\b|\bautobahn\b|\bautopista\b/.test(nm + ' ' + ref)
+        || (s.distance > 8000 && s.duration > 0 && (s.distance / s.duration) > 22);
+      if (isHw) hwKm += s.distance / 1000;
     });
     hwKm = Math.round(hwKm);
 
@@ -660,7 +655,7 @@ document.getElementById('btn-test').addEventListener('click', async () => {
 
   await test('Photon geocoding',     'https://photon.komoot.io/api/?q=Milano&limit=1');
   await test('Nominatim geocoding',  'https://nominatim.openstreetmap.org/search?q=Roma&format=json&limit=1');
-  await test('OpenRouteService',     `https://api.openrouteservice.org/v2/directions/driving-car?api_key=5b3ce3597851110001cf624888c1c3a5c6a74f92b73e9f6f9d3a2c66&start=9.19,45.46&end=12.49,41.89`);
+  await test('OSRM routing',         'https://router.project-osrm.org/route/v1/driving/9.19,45.46;12.49,41.89?overview=false');
   await test('Supercharge.info',     'https://supercharge.info/service/supercharge/allSites');
   await test('CartoDB tiles',        'https://a.basemaps.cartocdn.com/dark_all/5/16/11.png');
 
