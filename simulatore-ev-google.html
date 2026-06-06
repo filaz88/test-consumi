@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Ugo &amp; Isotta">
@@ -15,6 +15,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{overflow-x:hidden!important;max-width:100vw!important}
 html{overflow-x:hidden;width:100%}
 :root{
   --bg:#080c14;--surface:#0f1520;--card:#131b2a;--border:#1e2d45;
@@ -103,6 +104,16 @@ body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:15
 .food-detail span{color:var(--warn)}
 .note{font-size:0.78rem;color:var(--muted);line-height:1.7;padding:0.85rem 1rem;background:rgba(0,212,255,0.04);border-left:2px solid var(--accent);border-radius:0 8px 8px 0;font-family:var(--body)}
 .note strong{color:var(--accent)}
+.parking-item{display:flex;gap:0.8rem;padding:0.8rem;background:var(--surface);border-radius:12px;border-left:3px solid var(--accent);margin-bottom:0.5rem}
+.parking-icon{font-size:1.1rem;flex-shrink:0;line-height:1.3}
+.parking-name{font-size:0.88rem;font-weight:600;color:var(--text);font-family:var(--heading)}
+.parking-detail{font-size:0.75rem;color:var(--muted);margin-top:0.25rem;line-height:1.6}
+.parking-fee{display:inline-block;font-family:var(--mono);font-size:0.72rem;padding:0.15rem 0.5rem;border-radius:20px;margin-top:0.3rem;font-weight:600}
+.fee-free{background:rgba(0,255,157,0.1);color:var(--accent2);border:1px solid rgba(0,255,157,0.3)}
+.fee-paid{background:rgba(255,179,0,0.1);color:var(--warn);border:1px solid rgba(255,179,0,0.3)}
+.fee-unknown{background:rgba(90,112,148,0.1);color:var(--muted);border:1px solid var(--border)}
+.policy-box{background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.15);border-radius:12px;padding:1rem;margin-bottom:1rem;font-size:0.82rem;line-height:1.7;color:var(--text)}
+.policy-box .policy-title{font-family:var(--heading);font-weight:700;font-size:0.85rem;color:var(--accent);margin-bottom:0.5rem;display:block}
 @media(max-width:400px){.params-grid{grid-template-columns:1fr}.summary-strip{grid-template-columns:1fr 1fr}.summary-strip .strip-item:last-child{grid-column:span 2}}
 </style>
 </head>
@@ -133,7 +144,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:15
       <div class="ac-wrap">
         <div class="input-group">
           <div class="dot dot-to"></div>
-          <input id="inp-to" class="ev-input" type="text" placeholder="Arrivo (es. Roma)" autocomplete="off">
+          <input id="inp-to" class="ev-input" type="text" placeholder="Arrivo (es. Ascoli Piceno)" autocomplete="off">
         </div>
         <div class="ac-dropdown" id="dd-to"></div>
       </div>
@@ -250,6 +261,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:15
       <div class="cost-rows" id="comparison-rows"></div>
     </div>
 
+    <div class="card" id="card-parking" style="display:none">
+      <p class="card-title">🅿️ Parcheggi EV a destinazione</p>
+      <div id="parking-content">
+        <div class="spinner-wrap"><div class="spinner"></div><span style="font-family:var(--body);font-size:0.78rem;color:var(--muted)">Ricerca parcheggi in corso…</span></div>
+      </div>
+    </div>
+
     <div class="note">
       <strong>Fonte dati:</strong> Percorso via OSRM. Mappa OpenStreetMap.
       Supercharger Tesla live da supercharge.info. Pedaggi stimati sui km autostradali rilevati.
@@ -264,7 +282,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:15
 const LANGS = {
   it: {
     heroSub:'Percorso reale · Consumi · Pedaggi · Supercharger Tesla',
-    cardRoute:'📍 Percorso',placFrom:'Partenza (es. Milano)',placTo:'Arrivo (es. Roma)',
+    cardRoute:'📍 Percorso',placFrom:'Partenza (es. Milano)',placTo:'Arrivo (es. Ascoli Piceno)',
     cardCar:'🚗 Parametri auto',lblCons:'Consumo',unitCons:'kWh / 100 km',
     lblBat:'Batteria totale',lblSoc:'Carica attuale',unitSoc:'% SOC partenza',
     lblMin:'Soglia minima sosta',unitMin:'% SOC trigger',
@@ -281,7 +299,7 @@ const LANGS = {
   },
   en: {
     heroSub:'Real route · Consumption · Tolls · Tesla Supercharger',
-    cardRoute:'📍 Route',placFrom:'Departure (e.g. Milan)',placTo:'Arrival (e.g. Rome)',
+    cardRoute:'📍 Route',placFrom:'Departure (e.g. Milan)',placTo:'Arrival (e.g. Ascoli Piceno)',
     cardCar:'🚗 Car parameters',lblCons:'Consumption',unitCons:'kWh / 100 km',
     lblBat:'Total battery',lblSoc:'Current charge',unitSoc:'% SOC departure',
     lblMin:'Min stop threshold',unitMin:'% SOC trigger',
@@ -298,7 +316,7 @@ const LANGS = {
   },
   fr: {
     heroSub:'Itinéraire réel · Consommation · Péages · Tesla Supercharger',
-    cardRoute:'📍 Itinéraire',placFrom:'Départ (ex. Milan)',placTo:'Arrivée (ex. Rome)',
+    cardRoute:'📍 Itinéraire',placFrom:'Départ (ex. Milan)',placTo:'Arrivée (ex. Ascoli Piceno)',
     cardCar:'🚗 Paramètres',lblCons:'Consommation',unitCons:'kWh / 100 km',
     lblBat:'Batterie totale',lblSoc:'Charge actuelle',unitSoc:'% SOC départ',
     lblMin:'Seuil minimum',unitMin:'% SOC déclencheur',
@@ -314,7 +332,7 @@ const LANGS = {
   },
   de: {
     heroSub:'Echte Route · Verbrauch · Maut · Tesla Supercharger',
-    cardRoute:'📍 Route',placFrom:'Abfahrt (z.B. Mailand)',placTo:'Ankunft (z.B. Rom)',
+    cardRoute:'📍 Route',placFrom:'Abfahrt (z.B. Mailand)',placTo:'Ankunft (z.B. Ascoli Piceno)',
     cardCar:'🚗 Fahrzeugparameter',lblCons:'Verbrauch',unitCons:'kWh / 100 km',
     lblBat:'Gesamtbatterie',lblSoc:'Ladestand',unitSoc:'% SOC Abfahrt',
     lblMin:'Mindeststoppschwelle',unitMin:'% SOC Auslöser',
@@ -330,7 +348,7 @@ const LANGS = {
   },
   es: {
     heroSub:'Ruta real · Consumo · Peajes · Tesla Supercharger',
-    cardRoute:'📍 Ruta',placFrom:'Salida (p.ej. Milán)',placTo:'Llegada (p.ej. Roma)',
+    cardRoute:'📍 Ruta',placFrom:'Salida (p.ej. Milán)',placTo:'Llegada (p.ej. Ascoli Piceno)',
     cardCar:'🚗 Parámetros',lblCons:'Consumo',unitCons:'kWh / 100 km',
     lblBat:'Batería total',lblSoc:'Carga actual',unitSoc:'% SOC salida',
     lblMin:'Umbral mínimo',unitMin:'% SOC disparador',
@@ -762,7 +780,14 @@ document.getElementById('btn-calc').addEventListener('click',async()=>{
     const tripCost=energyHomeCost+energyScCost+tollCost;
 
     // Render summary
-    document.getElementById('route-bar').innerHTML=`<strong>${from.name}</strong> <span style="color:var(--border)">→</span> <strong>${to.name}</strong>`;
+    document.getElementById('route-bar').innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem">
+        <span><strong>${from.name}</strong> <span style="color:var(--border)">→</span> <strong>${to.name}</strong></span>
+        <button onclick="sendToTesla(${to.lat},${to.lon},'${to.name.replace(/'/g,String.fromCharCode(39))}')"
+          style="display:inline-flex;align-items:center;gap:0.4rem;background:#e8263a;border:none;border-radius:8px;color:#fff;font-family:var(--heading);font-size:0.7rem;font-weight:700;padding:0.4rem 0.8rem;cursor:pointer;letter-spacing:0.04em;white-space:nowrap">
+          ⚡ Invia a Tesla
+        </button>
+      </div>`;
     document.getElementById('summary-strip').innerHTML=`
       <div class="strip-item"><div class="strip-val">${Math.round(distKm).toLocaleString('it-IT')}</div><div class="strip-label" data-i18n="lblKmTot">km totali</div></div>
       <div class="strip-item"><div class="strip-val">${fmtH(durSec)}</div><div class="strip-label" data-i18n="lblDuration">durata guida</div></div>
@@ -841,6 +866,9 @@ document.getElementById('btn-calc').addEventListener('click',async()=>{
       </div>`;
 
     document.getElementById('results').classList.add('show');
+
+    // Cerca parcheggi EV nella città di arrivo (in background)
+    searchEVParking(to.name, to.lat, to.lon);
     // Translate dynamic labels
     applyLang();
 
@@ -890,6 +918,288 @@ document.getElementById('btn-swap').addEventListener('click', () => {
     document.getElementById('btn-calc').disabled=false;
   }
 });
+
+// ── PARKING SEARCH ──
+async function searchEVParking(cityName, lat, lon) {
+  const card = document.getElementById('card-parking');
+  const content = document.getElementById('parking-content');
+  card.style.display = 'block';
+
+  // 1. Overpass: cerca parcheggi con ricarica EV entro 2km dalla destinazione
+  const overpassQuery = `
+    [out:json][timeout:15];
+    (
+      node["amenity"="parking"]["motorcar"!="no"](around:2000,${lat},${lon});
+      way["amenity"="parking"]["motorcar"!="no"](around:2000,${lat},${lon});
+      node["amenity"="parking_entrance"](around:2000,${lat},${lon});
+    );
+    out body center 20;
+  `;
+
+  let osmParking = [];
+  try {
+    const res = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST', body: 'data=' + encodeURIComponent(overpassQuery)
+    });
+    const data = await res.json();
+    osmParking = (data.elements || [])
+      .filter(el => el.tags?.name || el.tags?.['parking:fee'] || el.tags?.fee)
+      .map(el => {
+        const t = el.tags || {};
+        const fee = t.fee || t['parking:fee'] || t['charge'] || '';
+        const feeClass = fee === 'no' || fee === 'free' ? 'fee-free'
+          : fee === 'yes' || fee === 'interval' || fee === 'hourly' ? 'fee-paid'
+          : 'fee-unknown';
+        const feeLabel = fee === 'no' || fee === 'free' ? '✓ Gratuito'
+          : fee === 'yes' ? '€ A pagamento'
+          : fee === 'interval' ? '€ Tariffa oraria'
+          : fee ? '€ ' + fee : '? Tariffa non specificata';
+        const elLat = el.lat || el.center?.lat;
+        const elLon = el.lon || el.center?.lon;
+        const distM = elLat ? Math.round(haversine({lat,lon},{lat:elLat,lon:elLon})*1000) : null;
+        const hasEV = t['motorcar:conditional'] || t['charging_station'] || t['ev_charging'] || false;
+        return {
+          name: t.name || t['addr:street'] || 'Parcheggio',
+          fee, feeClass, feeLabel,
+          capacity: t.capacity || '',
+          access: t.access || '',
+          distM, hasEV,
+          openHours: t.opening_hours || '',
+        };
+      })
+      .filter(p => p.distM !== null && p.distM <= 2000)
+      .sort((a,b) => a.distM - b.distM)
+      .slice(0, 6);
+  } catch(e) { console.warn('Overpass parking error:', e); }
+
+  // 2. Politiche locali EV — database città principali
+  const EV_POLICIES = {
+    // ── ITALIA ──
+    'Roma':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV accedono gratuitamente alle ZTL del centro storico. ParkingRoma: 50% sconto per EV. Strisce blu soggette a pagamento ordinario.'},
+    'Milano':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Accesso gratuito Area C per EV puri. Parcheggi ATM: tariffa ridotta. Strisce blu non esentate. Accesso Area B con deroghe.'},
+    'Milan':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Accesso gratuito Area C per EV puri. Parcheggi ATM: tariffa ridotta. Strisce blu non esentate. Accesso Area B con deroghe.'},
+    'Firenze':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV accedono ZTL con pass gratuito per residenti. Parcheggi comunali: tariffa agevolata. Strisce blu soggette a pagamento.'},
+    'Napoli':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna esenzione generalizzata per EV. ZTL Tarsia accessibile con permesso speciale. Verificare aggiornamenti sul sito del Comune.'},
+    'Torino':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV accedono ZTL con permesso gratuito. Parcheggi GTT: sconto per veicoli a basse emissioni. Alcune strisce blu esentate in zone pilota.'},
+    'Bologna':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Accesso agevolato ZTL per EV puri. Parcheggi Saba: tariffe ridotte. Programma incentivi mobilità elettrica attivo.'},
+    'Venezia':{'free':'✅ Sì','ztl':'N/A','note':'Parcheggio Fusina gratuito per EV. Centro storico pedonale. Agevolazioni per traghetti con EV. Verificare stagionalità.'},
+    'Genova':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Parcheggi AMT senza esenzioni specifiche EV. Accesso ZTL con permesso a pagamento. Alcune colonnine gratuite in parcheggi convenzionati.'},
+    'Palermo':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna politica strutturata per EV sui parcheggi. ZTL accessibile con pass. Verificare aggiornamenti Comune.'},
+    'Bari':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna esenzione generalizzata. Alcune aree con colonnine gratuite. Verificare regolamento comunale aggiornato.'},
+    'Catania':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Politiche EV in fase di definizione. Alcune colonnine gratuite in parcheggi pubblici. Verificare sito comunale.'},
+    'Cagliari':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna esenzione strutturata per EV. ZTL con permesso. Verificare aggiornamenti del Comune.'},
+    'Verona':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV esentati dall'Area di Sosta a Tariffa differenziata in alcune zone. Accesso ZTL facilitato. Parcheggi AMV: tariffe ridotte.'},
+    'Padova':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con accesso agevolato ZTL. Parcheggi APS con tariffe ridotte. Progetto Smart Parking attivo.'},
+    'Trieste':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV accedono ZTL con permesso gratuito. Alcuni parcheggi comunali con tariffa ridotta. Programma espansione colonnine in corso.'},
+    'Bergamo':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Accesso ZTL Città Alta agevolato per EV. Parcheggi ATB con tariffe differenziate. Verificare regolamento stagionale.'},
+    'Brescia':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con agevolazioni nei parcheggi comunali. Accesso ZTL con pass specifico. Progetto mobilità sostenibile in espansione.'},
+    'Modena':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Esenzioni parziali per EV in alcune zone a pagamento. ZTL accessibile con permesso gratuito per EV.'},
+    'Parma':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con accesso ZTL facilitato. Sosta agevolata in alcune aree. Programma incentivi comunali attivo.'},
+    'Reggio Emilia':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Politiche favorevoli per EV con tariffe agevolate nei parcheggi comunali. ZTL accessibile.'},
+    'Perugia':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con accesso agevolato ZTL. Parcheggi comunali con tariffe ridotte per veicoli a basse emissioni.'},
+    'Ancona':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna esenzione strutturata. ZTL con permesso. Verificare sito del Comune per aggiornamenti.'},
+    'Pescara':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Politiche EV in sviluppo. Alcune colonnine gratuite. Verificare regolamento comunale.'},
+    'Taranto':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna esenzione specifica per EV. Verificare eventuali aggiornamenti del Comune.'},
+    'Reggio Calabria':{'free':'❌ No','ztl':'❌ No','note':'Nessuna politica EV strutturata attualmente. Verificare sito del Comune.'},
+    'Messina':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Politiche EV in corso di definizione. Verificare aggiornamenti comunali.'},
+    'Salerno':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna esenzione strutturata per EV. ZTL con permesso ordinario.'},
+    'Foggia':{'free':'❌ No','ztl':'❌ No','note':'Nessuna politica EV attiva al momento. Verificare sito del Comune.'},
+    'Rimini':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con accesso facilitato ZTL. Parcheggi estivi con tariffe agevolate. Colonnine gratuite in alcune strutture.'},
+    'Ravenna':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV accedono ZTL con permesso gratuito. Parcheggi comunali con tariffe ridotte.'},
+    'Ferrara':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con accesso ZTL agevolato. Città ciclabile: molte aree pedonali. Tariffe ridotte nei parcheggi comunali.'},
+    'Pisa':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV accedono ZTL con pass. Parcheggi vicino Piazza Miracoli con tariffe agevolate per EV.'},
+    'Livorno':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna esenzione strutturata. ZTL con permesso. Alcune colonnine gratuite in parcheggi pubblici.'},
+    'Siena':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con accesso facilitato ZTL centro storico. Parcheggi Siena Parcheggi con tariffe agevolate.'},
+    'Lucca':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con pass gratuito per ZTL. Parcheggi fuori mura con tariffe agevolate. Centro pedonale.'},
+    'Trento':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con accesso ZTL facilitato. Parcheggi Trentino Mobilità con tariffe ridotte. Programma Smart Mobility attivo.'},
+    'Bolzano':{'free':'✅ Sì','ztl':'✅ Sì','note':'Alto Adige: politiche molto favorevoli per EV. Parcheggi comunali gratuiti in alcune zone. ZTL accessibile liberamente. Rete ricarica capillare.'},
+    'Aosta':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Valle d'Aosta: incentivi regionali per EV. Parcheggi con tariffe agevolate. ZTL con accesso facilitato.'},
+    'Udine':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con accesso ZTL agevolato. Parcheggi AMTU con tariffe ridotte per veicoli a basse emissioni.'},
+    'Vicenza':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con pass ZTL gratuito. Parcheggi comunali con tariffe differenziate. Progetto e-mobility attivo.'},
+    'Treviso':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con accesso ZTL facilitato. Parcheggi con tariffe agevolate. Buona rete di ricarica pubblica.'},
+    // ── FRANCIA ──
+    'Paris':{'free':'✅ Sì','ztl':'✅ Sì','note':'Parking gratuit pour EV dans les parkings municipaux Paris Stationnement. Accès ZFE sans restriction. Recharge gratuite dans certains P+R.'},
+    'Lyon':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Tarifs réduits dans les parkings Effia pour EV. Accès ZFE facilité. Bornes de recharge gratuites dans certains parcs.'},
+    'Marseille':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Véhicules électriques avec tarifs réduits dans certains parkings. Accès ZFE sans vignette requise. Réseau de recharge en expansion.'},
+    'Toulouse':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV avec tarifs préférentiels dans les parkings Toulouse Métropole. ZFE accessible. Bornes gratuites dans P+R.'},
+    'Nice':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Parkings municipaux avec tarifs réduits pour EV. Accès zones piétonnes facilité. Bon réseau de recharge côte d'Azur.'},
+    'Bordeaux':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV avec avantages dans parkings Bordeaux Métropole. ZFE accesssible. Programme mobilité verte actif.'},
+    'Strasbourg':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Parkings CTS avec tarifs réduits pour EV. ZFE sans restriction. Réseau de tramway et recharge bien développé.'},
+    'Nantes':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV avec tarifs préférentiels dans parkings Nantes Métropole. ZFE accessible librement. Infrastructure de recharge en croissance.'},
+    'Montpellier':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Parkings TaM avec avantages pour EV. Zone ZFE sans restriction. Recharge gratuite dans certains P+R.'},
+    'Rennes':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV avec tarifs réduits dans parkings Star/Effia. ZFE librement accessible. Bornes gratuites dans métropole.'},
+    // ── SPAGNA ──
+    'Barcelona':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con tarifa reducida en aparcamientos B:SM. Acceso gratuito ZBE. Carga gratuita en puntos municipales. Etiqueta CERO obligatoria.'},
+    'Madrid':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EMT con tarifa reducida para EV. Acceso libre Madrid Central y Distrito Centro. Etiqueta CERO obligatoria para zonas restringidas.'},
+    'Valencia':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EMT Valencia: tarifa reducida para EV. Acceso ZBE facilitado. Puntos de carga gratuitos en aparcamientos municipales.'},
+    'Seville':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'TUSSAM con ventajas para EV. Zona Sevilla Centro accesible. Red de carga en expansión.'},
+    'Sevilla':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'TUSSAM con ventajas para EV. Zona Sevilla Centro accesible. Red de carga en expansión.'},
+    'Bilbao':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Aparcamientos municipales con tarifas reducidas para EV. ZBE acceso libre. Infraestructura de carga en crecimiento.'},
+    'Zaragoza':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con descuentos en aparcamientos municipales. Acceso ZBE sin restricciones. Puntos de carga gratuitos disponibles.'},
+    'Málaga':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Aparcamientos EMT con tarifa reducida. ZBE accesible para EV. Red de recarga en desarrollo.'},
+    'Palma':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Baleares con incentivos para EV. Aparcamientos municipales con tarifa reducida. ZBE accesible.'},
+    // ── GERMANIA ──
+    'Berlin':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'E-Fahrzeuge mit Sonderrechten in Umweltzonen. Einige Parkhäuser bieten kostenlose Ladung. Berliner Parkausweis für E-Fahrzeuge möglich.'},
+    'München':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Parkhäuser der Stadt München mit Rabatten für EV. Zufahrt Umweltzone ohne Einschränkungen. Kostenlose Ladestationen in einigen Tiefgaragen.'},
+    'Munich':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'City car parks with EV discounts. Free access to environmental zones. Free charging in some underground car parks.'},
+    'Hamburg':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Hamburger Parkhäuser mit EV-Rabatten. Umweltzone frei zugänglich. Kostenloses Laden in Park & Ride-Anlagen. Gut ausgebautes Ladenetz.'},
+    'Frankfurt':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'ABG Parkhäuser mit EV-Vergünstigungen. Umweltzone ohne Einschränkungen. Gratis Laden in einigen städtischen Garagen.'},
+    'Köln':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'KölnParken mit Rabatten für E-Fahrzeuge. Umweltzone frei. Gutes Ladenetz im Stadtgebiet.'},
+    'Cologne':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'City parking with EV discounts. Free access to environmental zones. Good charging network.'},
+    'Düsseldorf':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Rheinbahn-Parkhäuser mit EV-Rabatten. Umweltzone frei zugänglich. Ladenetz wird ausgebaut.'},
+    'Stuttgart':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'SSB-Parkhäuser mit Vergünstigungen für EV. Umweltzone nur für EV frei zugänglich (Feinstaub-Alarm-Regelungen). Kostenlose Ladestationen verfügbar.'},
+    'Leipzig':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Kommunale Parkhäuser mit EV-Rabatten. Umweltzone ohne Einschränkungen. Ladenetz in Expansion.'},
+    'Dresden':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'DVB Parkhäuser mit EV-Vergünstigungen. Umweltzone frei. Gutes Ladenetz in der Innenstadt.'},
+    'Nuremberg':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'VAG Parkhäuser mit Rabatten für E-Fahrzeuge. Umweltzone frei zugänglich. Ladenetz wächst stetig.'},
+    'Nürnberg':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'VAG Parkhäuser mit Rabatten für E-Fahrzeuge. Umweltzone frei zugänglich. Ladenetz wächst stetig.'},
+    'Bremen':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'BSAG Parkhäuser mit EV-Vergünstigungen. Umweltzone ohne Einschränkungen. Kostenlose Ladestationen in P+R.'},
+    'Hannover':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'üstra Parkhäuser mit EV-Rabatten. Umweltzone frei zugänglich. Gut ausgebautes Ladenetz.'},
+    'Freiburg':{'free':'✅ Sì','ztl':'✅ Sì','note':'Freiburg: città verde modello. Parcheggi municipali gratuiti per EV in alcune zone. ZTL accessibile. Ottima infrastruttura ciclabile e di ricarica.'},
+    // ── AUSTRIA ──
+    'Vienna':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Elektrofahrzeuge mit reduzierten Parkgebühren in Wiener Stadtgaragen. Zufahrt zur Umweltzone frei. Gratis Laden in Park & Ride-Anlagen.'},
+    'Wien':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Elektrofahrzeuge mit reduzierten Parkgebühren in Wiener Stadtgaragen. Zufahrt zur Umweltzone frei. Gratis Laden in Park & Ride-Anlagen.'},
+    'Graz':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Grazer Parkhäuser mit EV-Vergünstigungen. Umweltzone frei. Gutes Ladenetz in der Innenstadt. Förderungen für E-Mobilität.'},
+    'Salzburg':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Stadtbusparkgaragen mit EV-Rabatten. Zufahrt Innenstadtzone erleichtert. Ladenetz in Expansion.'},
+    'Innsbruck':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'IVB Parkhäuser mit EV-Vergünstigungen. Umweltzone frei zugänglich. Tirol fördert E-Mobilität aktiv.'},
+    // ── SVIZZERA ──
+    'Zürich':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Elektrofahrzeuge in Zürich mit Vergünstigungen in städtischen Parkhäusern. Keine Umweltzonen-Beschränkungen. Ladenetz gut ausgebaut.'},
+    'Zurich':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV with discounts in city car parks. No environmental zone restrictions. Well-developed charging network.'},
+    'Geneva':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Parkings municipaux genevois avec tarifs réduits pour EV. Zone piétonne accessible. Infrastructure de recharge excellente.'},
+    'Genève':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Parkings municipaux genevois avec tarifs réduits pour EV. Zone piétonne accessible. Infrastructure de recharge excellente.'},
+    'Basel':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Basler Parkhäuser mit EV-Vergünstigungen. Umweltzone frei zugänglich. Sehr gutes grenzüberschreitendes Ladenetz (D-F-CH).'},
+    'Bern':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Bernmobil Parkhäuser mit EV-Rabatten. Umweltzone frei. Gut ausgebautes Ladenetz in der Bundeshauptstadt.'},
+    'Lausanne':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Parkings TL avec tarifs réduits pour EV. Accès zones piétonnes facilité. Bon réseau de recharge.'},
+    // ── PAESI BASSI ──
+    'Amsterdam':{'free':'✅ Sì','ztl':'✅ Sì','note':'Gratis parkeren voor EV op veel gemeentelijke parkeerplaatsen. Vrije toegang tot milieuzones. Uitgebreid laadnetwerk. Centrum autoluw.'},
+    'Rotterdam':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'RET parkeergarages met kortingen voor EV. Milieuzone vrij toegankelijk. Groot laadnetwerk in de haven-stad.'},
+    'The Hague':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Haagse parkeergarages met EV-kortingen. Milieuzone vrij. Goed laadnetwerk in regeringsstad.'},
+    'Utrecht':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'U-OV parkeergarages met kortingen voor EV. Milieuzone vrij toegankelijk. Excellent laadnetwerk.'},
+    'Eindhoven':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Gemeentelijke parkeergarages met EV-voordelen. Milieuzone vrij. Philips-stad met goed laadnetwerk.'},
+    // ── BELGIO ──
+    'Brussels':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Voitures électriques avec tarifs réduits dans les parkings Interparking. Accès LEZ sans restriction. Chargeurs gratuits dans certains P+R.'},
+    'Bruxelles':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Voitures électriques avec tarifs réduits dans les parkings Interparking. Accès LEZ sans restriction. Chargeurs gratuits dans certains P+R.'},
+    'Antwerp':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Stad Antwerpen parkeergarages met EV-kortingen. LEZ vrij toegankelijk voor EV. Goed laadnetwerk in diamantstad.'},
+    'Antwerpen':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Stad Antwerpen parkeergarages met EV-kortingen. LEZ vrij toegankelijk voor EV. Goed laadnetwerk in diamantstad.'},
+    'Ghent':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Gent parkeergarages met EV-voordelen. Circulatieplan vriendelijk voor EV. Goed laadnetwerk.'},
+    'Gent':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Gent parkeergarages met EV-voordelen. Circulatieplan vriendelijk voor EV. Goed laadnetwerk.'},
+    // ── UK ──
+    'London':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV exempt from Congestion Charge and ULEZ. Some councils offer free parking. Blue Badge holders with EVs get additional benefits. Check local borough rules.'},
+    'Manchester':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'TfGM car parks with EV discounts. Clean Air Zone accessible for EV. Growing charging network. Council EV incentives available.'},
+    'Edinburgh':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Edinburgh City car parks with EV discounts. LEZ accessible for EV. Good charging infrastructure in Scottish capital.'},
+    'Birmingham':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'NCP car parks with EV discounts. Clean Air Zone accessible. Charging network expanding rapidly.'},
+    'Bristol':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Bristol Parking with EV discounts. Clean Air Zone accessible. Green city with good charging infrastructure.'},
+    'Glasgow':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Council car parks with EV discounts. LEZ accessible. Charging network growing across the city.'},
+    // ── PORTOGALLO ──
+    'Lisbon':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Veículos elétricos com tarifa reduzida nos parques EMEL. Acesso livre à ZULE. Carregamento gratuito em alguns parques municipais.'},
+    'Lisboa':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Veículos elétricos com tarifa reduzida nos parques EMEL. Acesso livre à ZULE. Carregamento gratuito em alguns parques municipais.'},
+    'Porto':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'STCP parques com tarifas reduzidas para EV. Zona histórica acessível. Boa rede de carregamento no norte de Portugal.'},
+    // ── SCANDINAVIA ──
+    'Oslo':{'free':'✅ Sì','ztl':'✅ Sì','note':'Norvegia leader mondiale EV. Parcheggi gratuiti per EV in molte strutture pubbliche. ZTL accessibile. Ricarica gratuita in molti parcheggi. Pedaggi ridotti del 50%.'},
+    'Stockholm':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Svezia: parcheggi municipali con tariffe ridotte per EV. ZTL accessibile. Congestion tax ridotta per EV. Ottima rete di ricarica.'},
+    'Copenhagen':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Danimarca: parcheggi pubblici con tariffe agevolate per EV. ZTL accessibile. Rete di ricarica capillare. Incentivi comunali attivi.'},
+    'Helsinki':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Finlandia: parcheggi HSL con tariffe ridotte per EV. ZTL accessibile. Rete di ricarica in espansione. Incentivi governativi.'},
+    'Gothenburg':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Göteborg: parcheggi Västtrafik con sconti per EV. Congestion tax ridotta. Rete di ricarica in crescita.'},
+    // ── EUROPA CENTRALE/EST ──
+    'Prague':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna esenzione strutturata per EV sui parcheggi. ZTL con permesso. Rete di ricarica in espansione nella capitale ceca.'},
+    'Warsaw':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna politica EV strutturata sui parcheggi. ZTL con permesso. Polonia sta sviluppando infrastrutture EV.'},
+    'Budapest':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna esenzione generalizzata per EV. ZTL con permesso. Rete di ricarica in sviluppo nella capitale ungherese.'},
+    'Vienna':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Wiener Stadtgaragen con Vergünstigungen per EV. Umweltzone libera. Ricarica gratuita in Park & Ride.'},
+    'Bratislava':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Politiche EV in sviluppo. Alcune colonnine gratuite in centro. Verificare regolamento comunale.'},
+    'Ljubljana':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Centro completamente chiuso al traffico. EV con accesso facilitato. Parcheggi Petrol con tariffe agevolate. Slovenia molto green-friendly.'},
+    'Zagreb':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna esenzione strutturata per EV. ZTL con permesso. Infrastruttura di ricarica in espansione.'},
+    'Bucharest':{'free':'❌ No','ztl':'❌ No','note':'Politiche EV ancora limitate. Nessuna ZTL con accesso EV facilitato. Rete di ricarica in sviluppo.'},
+    'Sofia':{'free':'❌ No','ztl':'❌ No','note':'Politiche EV in fase iniziale. Verificare il sito del Comune per eventuali aggiornamenti.'},
+    'Athens':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Atene: alcune agevolazioni per EV in ZTL. Nessuna esenzione strutturata sui parcheggi. Rete di ricarica in espansione.'},
+    'Atene':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Atene: alcune agevolazioni per EV in ZTL. Nessuna esenzione strutturata sui parcheggi. Rete di ricarica in espansione.'},
+  };
+
+  let policyHTML = '';
+  // Match city name (case-insensitive, partial match)
+  const cityKey = Object.keys(EV_POLICIES).find(k =>
+    cityName.toLowerCase().includes(k.toLowerCase()) ||
+    k.toLowerCase().includes(cityName.toLowerCase().split(',')[0])
+  );
+  const policy = cityKey ? EV_POLICIES[cityKey] : null;
+
+  if (policy) {
+    policyHTML = `<div class="policy-box">
+      <span class="policy-title">📋 Politiche parcheggio EV — ${cityKey}</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.7rem">
+        <div style="background:var(--card);border-radius:8px;padding:0.6rem;text-align:center">
+          <div style="font-family:var(--heading);font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:0.2rem">Parcheggio gratuito</div>
+          <div style="font-size:1rem">${policy.free}</div>
+        </div>
+        <div style="background:var(--card);border-radius:8px;padding:0.6rem;text-align:center">
+          <div style="font-family:var(--heading);font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:0.2rem">Accesso ZTL/ZFE</div>
+          <div style="font-size:1rem">${policy.ztl}</div>
+        </div>
+      </div>
+      <p style="font-size:0.82rem;line-height:1.7;color:var(--text)">${policy.note}</p>
+      <p style="font-family:var(--mono);font-size:0.6rem;color:var(--muted);margin-top:0.6rem">⚠️ Informazioni indicative — verifica sempre sul sito del Comune prima del viaggio</p>
+    </div>`;
+  } else {
+    policyHTML = `<div class="policy-box">
+      <span class="policy-title">📋 Politiche parcheggio EV — ${cityName}</span>
+      <p style="font-size:0.82rem;line-height:1.7;color:var(--text)">
+        Non abbiamo dati specifici per questa città nel nostro database. 
+        Ti consigliamo di verificare sul sito del Comune o su 
+        <strong style="color:var(--accent)">plugshare.com</strong> per informazioni 
+        aggiornate sulle politiche di sosta per veicoli elettrici.
+      </p>
+    </div>`;
+  }
+
+  // 3. Render
+  let html = policyHTML;
+
+  if (osmParking.length) {
+    html += `<div style="font-family:var(--heading);font-size:0.65rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:0.6rem">📍 Parcheggi nelle vicinanze (entro 2km)</div>`;
+    html += osmParking.map(p => `
+      <div class="parking-item">
+        <div class="parking-icon">${p.hasEV ? '⚡' : '🅿️'}</div>
+        <div>
+          <div class="parking-name">${p.name}</div>
+          <div class="parking-detail">
+            ${p.distM ? `~${p.distM}m dal centro` : ''}
+            ${p.capacity ? ` · ${p.capacity} posti` : ''}
+            ${p.openHours ? ` · ${p.openHours}` : ''}
+          </div>
+          <span class="parking-fee ${p.feeClass}">${p.feeLabel}</span>
+        </div>
+      </div>`).join('');
+  } else {
+    html += `<div style="font-size:0.82rem;color:var(--muted);padding:0.5rem">Nessun dato parcheggio disponibile su OpenStreetMap per questa area.</div>`;
+  }
+
+  content.innerHTML = html;
+}
+
+// ── SEND TO TESLA ──
+function sendToTesla(lat, lon, name) {
+  // Tesla app deep link — apre direttamente la navigazione nell'app Tesla se installata
+  const teslaDeepLink = `tesla://navigation?lat=${lat}&lon=${lon}&name=${encodeURIComponent(name)}`;
+  // Fallback: Google Maps con indirizzo (apre Tesla se è l'app di navigazione predefinita)
+  const googleMapsLink = `https://maps.google.com/?q=${lat},${lon}&navigate=yes`;
+  // Prova prima deep link Tesla, poi fallback
+  const iframe = document.createElement('iframe');
+  iframe.style.display = 'none';
+  iframe.src = teslaDeepLink;
+  document.body.appendChild(iframe);
+  setTimeout(() => {
+    document.body.removeChild(iframe);
+  }, 2000);
+  // Mostra conferma
+  const btn = event.target.closest('button');
+  const orig = btn.innerHTML;
+  btn.innerHTML = '✅ Inviato!';
+  btn.style.background = '#00ff9d';
+  btn.style.color = '#000';
+  setTimeout(() => {
+    btn.innerHTML = orig;
+    btn.style.background = '#e8263a';
+    btn.style.color = '#fff';
+  }, 2500);
+}
 
 // ── TEST BUTTON ──
 document.getElementById('btn-test').addEventListener('click',async()=>{
