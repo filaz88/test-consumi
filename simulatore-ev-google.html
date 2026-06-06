@@ -134,7 +134,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:15
         <div class="input-group">
           <div class="dot dot-from"></div>
           <input id="inp-from" class="ev-input" type="text" placeholder="Partenza (es. Milano)" autocomplete="off" style="padding-right:2.8rem">
-          <button id="btn-geo" title="Usa posizione attuale" style="position:absolute;right:0.7rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--accent);z-index:3">📍</button>
+          <button id="btn-geo" title="Usa posizione attuale" onclick="geolocate()" style="position:absolute;right:0.7rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--accent);z-index:10;-webkit-tap-highlight-color:transparent;touch-action:manipulation">📍</button>
         </div>
         <div class="ac-dropdown" id="dd-from"></div>
       </div>
@@ -220,10 +220,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:15
 
   <button class="btn-calc" id="btn-calc">⚡ Calcola percorso</button>
 
-  <button id="btn-test" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:var(--heading);font-size:0.68rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;border-radius:10px;padding:0.6rem;cursor:pointer">
-    🔧 Test connessione servizi
-  </button>
-  <div id="test-results" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;font-family:var(--mono);font-size:0.72rem;line-height:2;color:var(--text)"></div>
+
 
   <div class="error-box" id="error-box"></div>
 
@@ -395,8 +392,7 @@ function applyLang() {
   // buttons
   const bc = document.getElementById('btn-calc');
   if (bc) bc.textContent = t.btnCalc;
-  const bt = document.getElementById('btn-test');
-  if (bt) bt.textContent = t.btnTest;
+
 }
 
 // ── HELPERS ──
@@ -497,6 +493,214 @@ async function fetchFoodNearby(lat,lon) {
   } catch(e) { return []; }
 }
 
+
+// ── DATABASE LOCALE CITTÀ (prefix search istantaneo) ──
+const CITIES_DB = [
+  // ITALIA — tutte le province e comuni principali
+  {n:'Agrigento',r:'Sicilia',c:'IT',lat:37.311,lon:13.576},
+  {n:'Alessandria',r:'Piemonte',c:'IT',lat:44.913,lon:8.615},
+  {n:'Ancona',r:'Marche',c:'IT',lat:43.617,lon:13.517},
+  {n:'Andria',r:'Puglia',c:'IT',lat:41.227,lon:16.294},
+  {n:'Aosta',r:'Valle d\'Aosta',c:'IT',lat:45.737,lon:7.315},
+  {n:'Arezzo',r:'Toscana',c:'IT',lat:43.463,lon:11.880},
+  {n:'Ascoli Piceno',r:'Marche',c:'IT',lat:42.854,lon:13.575},
+  {n:'Asti',r:'Piemonte',c:'IT',lat:44.900,lon:8.206},
+  {n:'Avellino',r:'Campania',c:'IT',lat:40.914,lon:14.790},
+  {n:'Bari',r:'Puglia',c:'IT',lat:41.117,lon:16.872},
+  {n:'Barletta',r:'Puglia',c:'IT',lat:41.317,lon:16.283},
+  {n:'Belluno',r:'Veneto',c:'IT',lat:46.137,lon:12.217},
+  {n:'Benevento',r:'Campania',c:'IT',lat:41.130,lon:14.783},
+  {n:'Bergamo',r:'Lombardia',c:'IT',lat:45.695,lon:9.670},
+  {n:'Biella',r:'Piemonte',c:'IT',lat:45.567,lon:8.050},
+  {n:'Bologna',r:'Emilia-Romagna',c:'IT',lat:44.494,lon:11.343},
+  {n:'Bolzano',r:'Trentino-Alto Adige',c:'IT',lat:46.498,lon:11.356},
+  {n:'Brescia',r:'Lombardia',c:'IT',lat:45.541,lon:10.212},
+  {n:'Brindisi',r:'Puglia',c:'IT',lat:40.636,lon:17.943},
+  {n:'Cagliari',r:'Sardegna',c:'IT',lat:39.223,lon:9.122},
+  {n:'Caltanissetta',r:'Sicilia',c:'IT',lat:37.490,lon:14.062},
+  {n:'Campobasso',r:'Molise',c:'IT',lat:41.563,lon:14.656},
+  {n:'Carrara',r:'Toscana',c:'IT',lat:44.079,lon:10.099},
+  {n:'Caserta',r:'Campania',c:'IT',lat:41.074,lon:14.332},
+  {n:'Catania',r:'Sicilia',c:'IT',lat:37.502,lon:15.087},
+  {n:'Catanzaro',r:'Calabria',c:'IT',lat:38.910,lon:16.588},
+  {n:'Cesena',r:'Emilia-Romagna',c:'IT',lat:44.134,lon:12.242},
+  {n:'Chieti',r:'Abruzzo',c:'IT',lat:42.351,lon:14.168},
+  {n:'Como',r:'Lombardia',c:'IT',lat:45.810,lon:9.085},
+  {n:'Cosenza',r:'Calabria',c:'IT',lat:39.299,lon:16.253},
+  {n:'Cremona',r:'Lombardia',c:'IT',lat:45.133,lon:10.022},
+  {n:'Crotone',r:'Calabria',c:'IT',lat:39.082,lon:17.128},
+  {n:'Cuneo',r:'Piemonte',c:'IT',lat:44.386,lon:7.542},
+  {n:'Enna',r:'Sicilia',c:'IT',lat:37.566,lon:14.275},
+  {n:'Fermo',r:'Marche',c:'IT',lat:43.160,lon:13.718},
+  {n:'Ferrara',r:'Emilia-Romagna',c:'IT',lat:44.835,lon:11.620},
+  {n:'Firenze',r:'Toscana',c:'IT',lat:43.769,lon:11.256},
+  {n:'Foggia',r:'Puglia',c:'IT',lat:41.462,lon:15.549},
+  {n:'Forlì',r:'Emilia-Romagna',c:'IT',lat:44.222,lon:12.040},
+  {n:'Frosinone',r:'Lazio',c:'IT',lat:41.640,lon:13.343},
+  {n:'Genova',r:'Liguria',c:'IT',lat:44.405,lon:8.946},
+  {n:'Gorizia',r:'Friuli-Venezia Giulia',c:'IT',lat:45.940,lon:13.622},
+  {n:'Grosseto',r:'Toscana',c:'IT',lat:42.760,lon:11.108},
+  {n:'Imperia',r:'Liguria',c:'IT',lat:43.885,lon:8.027},
+  {n:'Isernia',r:'Molise',c:'IT',lat:41.599,lon:14.231},
+  {n:'L\'Aquila',r:'Abruzzo',c:'IT',lat:42.354,lon:13.400},
+  {n:'La Spezia',r:'Liguria',c:'IT',lat:44.105,lon:9.824},
+  {n:'Latina',r:'Lazio',c:'IT',lat:41.468,lon:12.904},
+  {n:'Lecce',r:'Puglia',c:'IT',lat:40.352,lon:18.175},
+  {n:'Lecco',r:'Lombardia',c:'IT',lat:45.856,lon:9.397},
+  {n:'Livorno',r:'Toscana',c:'IT',lat:43.548,lon:10.311},
+  {n:'Lodi',r:'Lombardia',c:'IT',lat:45.314,lon:9.503},
+  {n:'Lucca',r:'Toscana',c:'IT',lat:43.843,lon:10.508},
+  {n:'Macerata',r:'Marche',c:'IT',lat:43.300,lon:13.453},
+  {n:'Mantova',r:'Lombardia',c:'IT',lat:45.156,lon:10.791},
+  {n:'Massa',r:'Toscana',c:'IT',lat:44.034,lon:10.140},
+  {n:'Matera',r:'Basilicata',c:'IT',lat:40.666,lon:16.604},
+  {n:'Messina',r:'Sicilia',c:'IT',lat:38.193,lon:15.554},
+  {n:'Milano',r:'Lombardia',c:'IT',lat:45.464,lon:9.190},
+  {n:'Modena',r:'Emilia-Romagna',c:'IT',lat:44.647,lon:10.925},
+  {n:'Monza',r:'Lombardia',c:'IT',lat:45.584,lon:9.274},
+  {n:'Napoli',r:'Campania',c:'IT',lat:40.852,lon:14.268},
+  {n:'Novara',r:'Piemonte',c:'IT',lat:45.447,lon:8.622},
+  {n:'Nuoro',r:'Sardegna',c:'IT',lat:40.321,lon:9.332},
+  {n:'Oristano',r:'Sardegna',c:'IT',lat:39.906,lon:8.591},
+  {n:'Padova',r:'Veneto',c:'IT',lat:45.407,lon:11.876},
+  {n:'Palermo',r:'Sicilia',c:'IT',lat:38.116,lon:13.361},
+  {n:'Parma',r:'Emilia-Romagna',c:'IT',lat:44.801,lon:10.328},
+  {n:'Pavia',r:'Lombardia',c:'IT',lat:45.185,lon:9.156},
+  {n:'Perugia',r:'Umbria',c:'IT',lat:43.112,lon:12.388},
+  {n:'Pesaro',r:'Marche',c:'IT',lat:43.910,lon:12.913},
+  {n:'Pescara',r:'Abruzzo',c:'IT',lat:42.463,lon:14.214},
+  {n:'Piacenza',r:'Emilia-Romagna',c:'IT',lat:45.052,lon:9.693},
+  {n:'Pisa',r:'Toscana',c:'IT',lat:43.716,lon:10.396},
+  {n:'Pistoia',r:'Toscana',c:'IT',lat:43.933,lon:10.917},
+  {n:'Pordenone',r:'Friuli-Venezia Giulia',c:'IT',lat:45.958,lon:12.661},
+  {n:'Potenza',r:'Basilicata',c:'IT',lat:40.641,lon:15.799},
+  {n:'Prato',r:'Toscana',c:'IT',lat:43.880,lon:11.097},
+  {n:'Ragusa',r:'Sicilia',c:'IT',lat:36.928,lon:14.731},
+  {n:'Ravenna',r:'Emilia-Romagna',c:'IT',lat:44.416,lon:12.203},
+  {n:'Reggio Calabria',r:'Calabria',c:'IT',lat:38.114,lon:15.661},
+  {n:'Reggio Emilia',r:'Emilia-Romagna',c:'IT',lat:44.697,lon:10.631},
+  {n:'Rieti',r:'Lazio',c:'IT',lat:42.404,lon:12.856},
+  {n:'Rimini',r:'Emilia-Romagna',c:'IT',lat:44.059,lon:12.567},
+  {n:'Roma',r:'Lazio',c:'IT',lat:41.894,lon:12.482},
+  {n:'Rovigo',r:'Veneto',c:'IT',lat:45.070,lon:11.790},
+  {n:'Salerno',r:'Campania',c:'IT',lat:40.676,lon:14.763},
+  {n:'Sassari',r:'Sardegna',c:'IT',lat:40.727,lon:8.559},
+  {n:'Savona',r:'Liguria',c:'IT',lat:44.307,lon:8.481},
+  {n:'Siena',r:'Toscana',c:'IT',lat:43.318,lon:11.331},
+  {n:'Siracusa',r:'Sicilia',c:'IT',lat:37.075,lon:15.287},
+  {n:'Sondrio',r:'Lombardia',c:'IT',lat:46.170,lon:9.873},
+  {n:'Taranto',r:'Puglia',c:'IT',lat:40.474,lon:17.228},
+  {n:'Teramo',r:'Abruzzo',c:'IT',lat:42.659,lon:13.704},
+  {n:'Terni',r:'Umbria',c:'IT',lat:42.563,lon:12.641},
+  {n:'Torino',r:'Piemonte',c:'IT',lat:45.070,lon:7.687},
+  {n:'Trapani',r:'Sicilia',c:'IT',lat:37.869,lon:12.538},
+  {n:'Trento',r:'Trentino-Alto Adige',c:'IT',lat:46.067,lon:11.121},
+  {n:'Treviso',r:'Veneto',c:'IT',lat:45.667,lon:12.242},
+  {n:'Trieste',r:'Friuli-Venezia Giulia',c:'IT',lat:45.649,lon:13.777},
+  {n:'Udine',r:'Friuli-Venezia Giulia',c:'IT',lat:46.063,lon:13.235},
+  {n:'Varese',r:'Lombardia',c:'IT',lat:45.821,lon:8.825},
+  {n:'Venezia',r:'Veneto',c:'IT',lat:45.437,lon:12.335},
+  {n:'Verbania',r:'Piemonte',c:'IT',lat:45.923,lon:8.552},
+  {n:'Vercelli',r:'Piemonte',c:'IT',lat:45.320,lon:8.424},
+  {n:'Verona',r:'Veneto',c:'IT',lat:45.438,lon:10.993},
+  {n:'Vibo Valentia',r:'Calabria',c:'IT',lat:38.676,lon:16.100},
+  {n:'Vicenza',r:'Veneto',c:'IT',lat:45.548,lon:11.547},
+  {n:'Viterbo',r:'Lazio',c:'IT',lat:42.417,lon:12.106},
+  // EUROPA
+  {n:'Amsterdam',r:'Noord-Holland',c:'NL',lat:52.373,lon:4.890},
+  {n:'Antwerp',r:'Antwerpen',c:'BE',lat:51.221,lon:4.400},
+  {n:'Athens',r:'Attica',c:'GR',lat:37.983,lon:23.728},
+  {n:'Barcelona',r:'Catalunya',c:'ES',lat:41.385,lon:2.173},
+  {n:'Basel',r:'Basel-Stadt',c:'CH',lat:47.559,lon:7.588},
+  {n:'Belgrade',r:'Serbia',c:'RS',lat:44.802,lon:20.465},
+  {n:'Berlin',r:'Berlin',c:'DE',lat:52.520,lon:13.405},
+  {n:'Bern',r:'Bern',c:'CH',lat:46.948,lon:7.448},
+  {n:'Bilbao',r:'Euskadi',c:'ES',lat:43.263,lon:-2.935},
+  {n:'Bologna',r:'Emilia-Romagna',c:'IT',lat:44.494,lon:11.343},
+  {n:'Bordeaux',r:'Nouvelle-Aquitaine',c:'FR',lat:44.837,lon:-0.580},
+  {n:'Bratislava',r:'Bratislava',c:'SK',lat:48.145,lon:17.107},
+  {n:'Brussels',r:'Brussels',c:'BE',lat:50.850,lon:4.352},
+  {n:'Bucharest',r:'Ilfov',c:'RO',lat:44.430,lon:26.103},
+  {n:'Budapest',r:'Budapest',c:'HU',lat:47.498,lon:19.040},
+  {n:'Copenhagen',r:'Hovedstaden',c:'DK',lat:55.676,lon:12.568},
+  {n:'Dresden',r:'Sachsen',c:'DE',lat:51.050,lon:13.738},
+  {n:'Dublin',r:'Leinster',c:'IE',lat:53.350,lon:-6.266},
+  {n:'Düsseldorf',r:'NRW',c:'DE',lat:51.225,lon:6.782},
+  {n:'Edinburgh',r:'Scotland',c:'GB',lat:55.953,lon:-3.189},
+  {n:'Florence',r:'Toscana',c:'IT',lat:43.769,lon:11.256},
+  {n:'Frankfurt',r:'Hessen',c:'DE',lat:50.110,lon:8.682},
+  {n:'Geneva',r:'Genève',c:'CH',lat:46.205,lon:6.143},
+  {n:'Ghent',r:'Oost-Vlaanderen',c:'BE',lat:51.054,lon:3.718},
+  {n:'Glasgow',r:'Scotland',c:'GB',lat:55.864,lon:-4.252},
+  {n:'Gothenburg',r:'Västra Götaland',c:'SE',lat:57.707,lon:11.967},
+  {n:'Graz',r:'Steiermark',c:'AT',lat:47.070,lon:15.439},
+  {n:'Hamburg',r:'Hamburg',c:'DE',lat:53.551,lon:9.994},
+  {n:'Hannover',r:'Niedersachsen',c:'DE',lat:52.374,lon:9.738},
+  {n:'Helsinki',r:'Uusimaa',c:'FI',lat:60.169,lon:24.938},
+  {n:'Innsbruck',r:'Tirol',c:'AT',lat:47.269,lon:11.404},
+  {n:'Köln',r:'NRW',c:'DE',lat:50.938,lon:6.960},
+  {n:'Krakow',r:'Małopolska',c:'PL',lat:50.062,lon:19.938},
+  {n:'Lausanne',r:'Vaud',c:'CH',lat:46.520,lon:6.634},
+  {n:'Leipzig',r:'Sachsen',c:'DE',lat:51.340,lon:12.375},
+  {n:'Lisbon',r:'Lisboa',c:'PT',lat:38.717,lon:-9.139},
+  {n:'Ljubljana',r:'Ljubljana',c:'SI',lat:46.056,lon:14.505},
+  {n:'London',r:'England',c:'GB',lat:51.507,lon:-0.128},
+  {n:'Luxembourg',r:'Luxembourg',c:'LU',lat:49.612,lon:6.130},
+  {n:'Lyon',r:'Auvergne-Rhône-Alpes',c:'FR',lat:45.748,lon:4.847},
+  {n:'Madrid',r:'Comunidad de Madrid',c:'ES',lat:40.416,lon:-3.703},
+  {n:'Málaga',r:'Andalucía',c:'ES',lat:36.721,lon:-4.421},
+  {n:'Manchester',r:'England',c:'GB',lat:53.480,lon:-2.242},
+  {n:'Marseille',r:'PACA',c:'FR',lat:43.296,lon:5.381},
+  {n:'Milan',r:'Lombardia',c:'IT',lat:45.464,lon:9.190},
+  {n:'Monaco',r:'Monaco',c:'MC',lat:43.738,lon:7.424},
+  {n:'Montpellier',r:'Occitanie',c:'FR',lat:43.611,lon:3.877},
+  {n:'Munich',r:'Bayern',c:'DE',lat:48.137,lon:11.576},
+  {n:'Nantes',r:'Pays de la Loire',c:'FR',lat:47.218,lon:-1.553},
+  {n:'Nice',r:'PACA',c:'FR',lat:43.711,lon:7.262},
+  {n:'Nuremberg',r:'Bayern',c:'DE',lat:49.453,lon:11.077},
+  {n:'Oslo',r:'Oslo',c:'NO',lat:59.913,lon:10.752},
+  {n:'Paris',r:'Île-de-France',c:'FR',lat:48.857,lon:2.352},
+  {n:'Porto',r:'Norte',c:'PT',lat:41.150,lon:-8.611},
+  {n:'Prague',r:'Praha',c:'CZ',lat:50.075,lon:14.438},
+  {n:'Riga',r:'Rīga',c:'LV',lat:56.946,lon:24.106},
+  {n:'Rotterdam',r:'Zuid-Holland',c:'NL',lat:51.924,lon:4.478},
+  {n:'Salzburg',r:'Salzburg',c:'AT',lat:47.800,lon:13.045},
+  {n:'Seville',r:'Andalucía',c:'ES',lat:37.389,lon:-5.984},
+  {n:'Sofia',r:'Sofia',c:'BG',lat:42.698,lon:23.322},
+  {n:'Stockholm',r:'Stockholm',c:'SE',lat:59.333,lon:18.065},
+  {n:'Strasbourg',r:'Grand Est',c:'FR',lat:48.574,lon:7.752},
+  {n:'Stuttgart',r:'Baden-Württemberg',c:'DE',lat:48.776,lon:9.183},
+  {n:'Tallinn',r:'Harju',c:'EE',lat:59.437,lon:24.745},
+  {n:'The Hague',r:'Zuid-Holland',c:'NL',lat:52.079,lon:4.311},
+  {n:'Toulouse',r:'Occitanie',c:'FR',lat:43.605,lon:1.444},
+  {n:'Utrecht',r:'Utrecht',c:'NL',lat:52.091,lon:5.122},
+  {n:'Valencia',r:'Comunitat Valenciana',c:'ES',lat:39.470,lon:-0.376},
+  {n:'Vienna',r:'Wien',c:'AT',lat:48.208,lon:16.373},
+  {n:'Vilnius',r:'Vilnius',c:'LT',lat:54.687,lon:25.280},
+  {n:'Warsaw',r:'Mazowieckie',c:'PL',lat:52.230,lon:21.012},
+  {n:'Zagreb',r:'Zagreb',c:'HR',lat:45.814,lon:15.978},
+  {n:'Zurich',r:'Zürich',c:'CH',lat:47.377,lon:8.541},
+];
+
+function searchLocalCities(q) {
+  const ql = q.toLowerCase().trim();
+  return CITIES_DB
+    .filter(c => c.n.toLowerCase().startsWith(ql) || c.n.toLowerCase().includes(' '+ql))
+    .sort((a,b) => {
+      const as = a.n.toLowerCase().startsWith(ql) ? 0 : 1;
+      const bs = b.n.toLowerCase().startsWith(ql) ? 0 : 1;
+      return as - bs || a.n.localeCompare(b.n);
+    })
+    .slice(0, 8)
+    .map(c => ({
+      geometry: {coordinates: [c.lon, c.lat]},
+      properties: {
+        name: c.n, city: c.n, country: c.c === 'IT' ? 'Italia' : c.c,
+        state: c.r, osm_value: 'city', osm_key: 'place'
+      }
+    }));
+}
+
 // ── AUTOCOMPLETE ──
 let acTimers={};
 let geoMarker=null;
@@ -510,141 +714,114 @@ document.addEventListener('mousedown',e=>{
   });
 });
 
-function setupAC(inputId,ddId) {
-  const inp=document.getElementById(inputId);
-  const dd=document.getElementById(ddId);
-  let selected=null;
-  let currentQuery='';
+function setupAC(inputId, ddId) {
+  var inp = document.getElementById(inputId);
+  var dd  = document.getElementById(ddId);
+  var selected = null;
+  var currentQuery = '';
+
+  function nmToFeature(item) {
+    var a = item.address || {};
+    return {
+      geometry: { coordinates: [parseFloat(item.lon), parseFloat(item.lat)] },
+      properties: {
+        name: a.city||a.town||a.village||a.hamlet||item.display_name.split(',')[0],
+        city: a.city||a.town||a.village||'',
+        country: a.country||'', state: a.state||'',
+        osm_value: item.addresstype||item.type||'city'
+      }
+    };
+  }
 
   function showItems(features) {
-    dd.innerHTML='';
-    if(!features.length) {
-      dd.innerHTML='<div class="ac-item" style="color:var(--muted)">Nessun risultato</div>';
-      dd.classList.add('open'); return;
+    dd.innerHTML = '';
+    if (!features || !features.length) {
+      dd.innerHTML = '<div class="ac-item" style="color:var(--muted)">Nessun risultato</div>';
+      dd.classList.add('open');
+      return;
     }
-    const priority=['city','town','village','suburb','municipality','district','house','street','locality'];
-    features.sort((a,b)=>{
-      const ai=priority.indexOf(a.properties?.osm_value);
-      const bi=priority.indexOf(b.properties?.osm_value);
-      return (ai===-1?99:ai)-(bi===-1?99:bi);
-    }).slice(0,8).forEach(item=>{
-      const p=item.properties||{};
-      const name=p.name||'';
-      const city=p.city||p.town||p.village||'';
-      const country=p.country||'';
-      const state=p.state||'';
-      const isPlace=['city','town','village','suburb','municipality','district'].includes(p.osm_value);
-      const mainLabel=isPlace?name:[name,[p.street||'',p.housenumber||''].filter(Boolean).join(' ')].filter(Boolean).join(', ');
-      const subLabel=isPlace?[state,country].filter(Boolean).join(', '):[city,country].filter(Boolean).join(', ');
-      const icon=isPlace?'🏙️':(p.osm_key==='amenity'||p.osm_key==='tourism')?'📍':p.street?'🏠':'📌';
-      const fullLabel=[mainLabel,city,country].filter(Boolean).join(', ');
-      const displayName=mainLabel||city||name;
-      const lat=item.geometry.coordinates[1];
-      const lon=item.geometry.coordinates[0];
-      const el=document.createElement('div');
-      el.className='ac-item';
-      el.innerHTML=`<strong>${icon} ${displayName}</strong><small>${subLabel}</small>`;
-      el.addEventListener('mousedown',e=>{
+    var shown = features.slice(0, 8);
+    shown.forEach(function(item) {
+      var p = item.properties || {};
+      var name    = p.name || p.city || '';
+      var state   = p.state || '';
+      var country = p.country || '';
+      var lat = item.geometry.coordinates[1];
+      var lon = item.geometry.coordinates[0];
+      var sub = [state, country].filter(Boolean).join(', ');
+      var el = document.createElement('div');
+      el.className = 'ac-item';
+      el.innerHTML = '<strong>🏙️ ' + name + '</strong><small>' + sub + '</small>';
+      el.addEventListener('mousedown', function(e) {
         e.preventDefault();
-        inp.value=fullLabel;
-        selected={lat,lon,name:displayName};
+        inp.value = name + (country ? ', ' + country : '');
+        selected = { lat: lat, lon: lon, name: name };
+        inp._selOverride = selected;
         dd.classList.remove('open');
+        dd.innerHTML = '';
       });
       dd.appendChild(el);
     });
     dd.classList.add('open');
   }
 
-  inp.addEventListener('input',()=>{
+  inp.addEventListener('input', function() {
     clearTimeout(acTimers[inputId]);
-    selected=null;
-    const q=inp.value.trim();
-    currentQuery=q;
-    if(q.length<2){dd.classList.remove('open');dd.innerHTML='';return;}
-    dd.innerHTML='<div class="ac-item" style="color:var(--muted)">🔍 Ricerca in corso…</div>';
-    dd.classList.add('open');
-    acTimers[inputId]=setTimeout(async()=>{
-      if(q!==currentQuery) return;
+    selected = null;
+    inp._selOverride = null;
+    var q = inp.value.trim();
+    currentQuery = q;
+    if (q.length < 2) { dd.classList.remove('open'); dd.innerHTML = ''; return; }
 
-      // Converte risultato Nominatim in formato interno
-      function nmToFeature(item) {
-        const a=item.address||{};
-        return {
-          geometry:{coordinates:[parseFloat(item.lon),parseFloat(item.lat)]},
-          properties:{
-            name:a.city||a.town||a.village||a.hamlet||item.display_name.split(',')[0],
-            city:a.city||a.town||a.village||'',
-            country:a.country||'',state:a.state||'',
-            street:a.road||'',housenumber:a.house_number||'',
-            osm_value:item.addresstype||item.type||'city',osm_key:item.class||'',
-          }
-        };
-      }
-
-      // Tenta le API in sequenza, usa la prima che risponde
-      // Per query corte (< 4 char) aggiungi spazio per forzare prefix match
-      const searchQ = q.length < 4 ? q + ' ' : q;
-
-      const apis = [
-        // 1. Photon — supporta prefix search nativamente, ottimo per query corte
-        async () => {
-          const r=await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(searchQ)}&limit=10&lang=it&lat=44&lon=12&location_bias_scale=0.6`,
-            {signal:AbortSignal.timeout(5000)});
-          if(!r.ok) throw new Error('photon '+r.status);
-          const d=await r.json();
-          if(!d?.features?.length) throw new Error('no results');
-          return d.features;
-        },
-        // 2. Nominatim con autocomplete=1 — supporta prefix search
-        async () => {
-          const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQ)}&format=json&limit=8&addressdetails=1&accept-language=it&featuretype=city`,
-            {signal:AbortSignal.timeout(5000)});
-          if(!r.ok) throw new Error('nm '+r.status);
-          const d=await r.json();
-          if(!d?.length) throw new Error('no results');
-          return d.map(nmToFeature);
-        },
-        // 3. Nominatim generico — fallback senza featuretype
-        async () => {
-          const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQ)}&format=json&limit=8&addressdetails=1&accept-language=it`,
-            {signal:AbortSignal.timeout(6000)});
-          if(!r.ok) throw new Error('nm2 '+r.status);
-          const d=await r.json();
-          if(!d?.length) throw new Error('no results');
-          return d.map(nmToFeature);
-        }
-      ];
-
-      let success=false;
-      for(const api of apis) {
-        if(q!==currentQuery) return;
-        try {
-          const features=await api();
-          if(q!==currentQuery) return;
-          showItems(features);
-          success=true;
-          break;
-        } catch(e) { /* prova prossima */ }
-      }
-
-      if(!success && q===currentQuery) {
-        dd.innerHTML='<div class="ac-item" style="color:#ff6b6b">❌ Servizio non disponibile — riprova tra qualche secondo</div>';
-        dd.classList.add('open');
-      }
-    },300);
-  });
-
-  inp.addEventListener('keydown',e=>{
-    if(e.key==='Enter'){
-      const first=dd.querySelector('.ac-item:not([style*="muted"]):not([style*="ff6b6b"])');
-      if(first&&dd.classList.contains('open')) first.dispatchEvent(new MouseEvent('mousedown'));
+    // Mostra subito DB locale
+    var local = searchLocalCities(q);
+    if (local.length > 0) {
+      showItems(local);
+    } else {
+      dd.innerHTML = '<div class="ac-item" style="color:var(--muted)">🔍 Ricerca…</div>';
+      dd.classList.add('open');
     }
-    if(e.key==='Escape') dd.classList.remove('open');
+
+    // Arricchisci con Photon dopo 350ms
+    acTimers[inputId] = setTimeout(function() {
+      if (q !== currentQuery) return;
+      var sq = q.length < 4 ? q + ' ' : q;
+      fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(sq) + '&limit=8&lang=it&lat=44&lon=12&location_bias_scale=0.6')
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(d) {
+          if (q !== currentQuery) return;
+          if (d && d.features && d.features.length) {
+            var seen = {};
+            local.forEach(function(f) { seen[f.properties.name.toLowerCase()] = 1; });
+            var extra = d.features.filter(function(f) {
+              var n = ((f.properties && (f.properties.name || f.properties.city)) || '').toLowerCase();
+              return n && !seen[n];
+            });
+            showItems(local.concat(extra));
+          } else if (local.length === 0) {
+            fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(sq) + '&format=json&limit=6&addressdetails=1&accept-language=it')
+              .then(function(r2) { return r2.ok ? r2.json() : null; })
+              .then(function(d2) {
+                if (q !== currentQuery) return;
+                if (d2 && d2.length) showItems(d2.map(nmToFeature));
+                else { dd.innerHTML = '<div class="ac-item" style="color:var(--muted)">Nessun risultato</div>'; dd.classList.add('open'); }
+              }).catch(function() {});
+          }
+        }).catch(function() {});
+    }, 350);
   });
 
-  inp._sel=()=>inp._selOverride||selected;
-  inp.addEventListener('input',()=>{inp._selOverride=null;});
+  inp.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      var first = dd.querySelector('.ac-item');
+      if (first && dd.classList.contains('open')) first.dispatchEvent(new MouseEvent('mousedown'));
+    }
+    if (e.key === 'Escape') dd.classList.remove('open');
+  });
+
+  inp._sel = function() { return inp._selOverride || selected; };
 }
+
 
 setupAC('inp-from','dd-from');
 setupAC('inp-to','dd-to');
@@ -675,7 +852,7 @@ document.getElementById('btn-swap').addEventListener('click', () => {
 });
 
 // ── GEOLOCATION ──
-document.getElementById('btn-geo').addEventListener('click',async()=>{
+function geolocate() {
   const btn=document.getElementById('btn-geo');
   if(!navigator.geolocation){alert('Geolocalizzazione non supportata.');return;}
   btn.textContent='⏳';btn.style.pointerEvents='none';
@@ -686,7 +863,7 @@ document.getElementById('btn-geo').addEventListener('click',async()=>{
     geoMarker=L.marker([lat,lon],{icon:geoIcon}).bindPopup('<b>📍 Sei qui</b>').addTo(map);
     map.setView([lat,lon],12);
     try {
-      const r=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=it`,{signal:AbortSignal.timeout(5000)});
+      const r=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=it`,{});
       const d=await r.json();
       const city=d.address?.city||d.address?.town||d.address?.village||'';
       const country=d.address?.country||'';
@@ -705,7 +882,7 @@ document.getElementById('btn-geo').addEventListener('click',async()=>{
     const msgs={1:'Permesso negato.',2:'Posizione non disponibile.',3:'Timeout.'};
     alert(msgs[err.code]||'Errore geolocalizzazione.');
   },{enableHighAccuracy:true,timeout:10000});
-});
+}
 
 // ── SLIDERS ──
 document.getElementById('sl-kwh').addEventListener('input',function(){document.getElementById('lbl-kwh').textContent='€ '+parseFloat(this.value).toFixed(2).replace('.',',')+'/kWh';});
@@ -735,19 +912,26 @@ document.getElementById('btn-calc').addEventListener('click',async()=>{
   const thCons=parseFloat(document.getElementById('sl-thcons').value)||6.0;
 
   const geocode=async q=>{
-    // Photon first
+    // 1. Database locale prima (istantaneo)
+    const local = searchLocalCities(q);
+    if(local.length > 0) {
+      const f = local[0];
+      return {lat:f.geometry.coordinates[1], lon:f.geometry.coordinates[0], name:f.properties.name};
+    }
+    // 2. Photon
     try{
-      const r=await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=3&lang=it&lat=45&lon=12`);
+      const r=await fetch('https://photon.komoot.io/api/?q='+encodeURIComponent(q)+'&limit=3&lang=it&lat=44&lon=12');
       const d=await r.json();
       const f=d?.features?.[0];
       if(f){const p=f.properties;return{lat:f.geometry.coordinates[1],lon:f.geometry.coordinates[0],name:p.name||p.city||q};}
     }catch(e){}
-    // Nominatim fallback
-    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&addressdetails=1`);
-    const d=await r.json();
-    if(!d?.length) throw new Error(`Città non trovata: "${q}"`);
-    const a=d[0].address||{};
-    return{lat:parseFloat(d[0].lat),lon:parseFloat(d[0].lon),name:a.city||a.town||d[0].display_name.split(',')[0]};
+    // 3. Nominatim
+    try{
+      const r=await fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(q)+'&format=json&limit=1&addressdetails=1');
+      const d=await r.json();
+      if(d?.length){const a=d[0].address||{};return{lat:parseFloat(d[0].lat),lon:parseFloat(d[0].lon),name:a.city||a.town||d[0].display_name.split(',')[0]};}
+    }catch(e){}
+    throw new Error('Città non trovata: "'+q+'". Seleziona dal menu a tendina.');
   };
 
   try{
@@ -1021,7 +1205,7 @@ async function searchEVParking(cityName, lat, lon) {
     'Bari':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna esenzione generalizzata. Alcune aree con colonnine gratuite. Verificare regolamento comunale aggiornato.'},
     'Catania':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Politiche EV in fase di definizione. Alcune colonnine gratuite in parcheggi pubblici. Verificare sito comunale.'},
     'Cagliari':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna esenzione strutturata per EV. ZTL con permesso. Verificare aggiornamenti del Comune.'},
-    'Verona':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV esentati dall'Area di Sosta a Tariffa differenziata in alcune zone. Accesso ZTL facilitato. Parcheggi AMV: tariffe ridotte.'},
+    'Verona':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV esentati dall’Area di Sosta a Tariffa differenziata in alcune zone. Accesso ZTL facilitato. Parcheggi AMV: tariffe ridotte.'},
     'Padova':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con accesso agevolato ZTL. Parcheggi APS con tariffe ridotte. Progetto Smart Parking attivo.'},
     'Trieste':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV accedono ZTL con permesso gratuito. Alcuni parcheggi comunali con tariffa ridotta. Programma espansione colonnine in corso.'},
     'Bergamo':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Accesso ZTL Città Alta agevolato per EV. Parcheggi ATB con tariffe differenziate. Verificare regolamento stagionale.'},
@@ -1046,7 +1230,7 @@ async function searchEVParking(cityName, lat, lon) {
     'Lucca':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con pass gratuito per ZTL. Parcheggi fuori mura con tariffe agevolate. Centro pedonale.'},
     'Trento':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con accesso ZTL facilitato. Parcheggi Trentino Mobilità con tariffe ridotte. Programma Smart Mobility attivo.'},
     'Bolzano':{'free':'✅ Sì','ztl':'✅ Sì','note':'Alto Adige: politiche molto favorevoli per EV. Parcheggi comunali gratuiti in alcune zone. ZTL accessibile liberamente. Rete ricarica capillare.'},
-    'Aosta':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Valle d'Aosta: incentivi regionali per EV. Parcheggi con tariffe agevolate. ZTL con accesso facilitato.'},
+    'Aosta':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Valle d’Aosta: incentivi regionali per EV. Parcheggi con tariffe agevolate. ZTL con accesso facilitato.'},
     'Udine':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con accesso ZTL agevolato. Parcheggi AMTU con tariffe ridotte per veicoli a basse emissioni.'},
     'Vicenza':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con pass ZTL gratuito. Parcheggi comunali con tariffe differenziate. Progetto e-mobility attivo.'},
     'Treviso':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con accesso ZTL facilitato. Parcheggi con tariffe agevolate. Buona rete di ricarica pubblica.'},
@@ -1055,7 +1239,7 @@ async function searchEVParking(cityName, lat, lon) {
     'Lyon':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Tarifs réduits dans les parkings Effia pour EV. Accès ZFE facilité. Bornes de recharge gratuites dans certains parcs.'},
     'Marseille':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Véhicules électriques avec tarifs réduits dans certains parkings. Accès ZFE sans vignette requise. Réseau de recharge en expansion.'},
     'Toulouse':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV avec tarifs préférentiels dans les parkings Toulouse Métropole. ZFE accessible. Bornes gratuites dans P+R.'},
-    'Nice':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Parkings municipaux avec tarifs réduits pour EV. Accès zones piétonnes facilité. Bon réseau de recharge côte d'Azur.'},
+    'Nice':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Parkings municipaux avec tarifs réduits pour EV. Accès zones piétonnes facilité. Bon réseau de recharge côte d’Azur.'},
     'Bordeaux':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV avec avantages dans parkings Bordeaux Métropole. ZFE accesssible. Programme mobilité verte actif.'},
     'Strasbourg':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Parkings CTS avec tarifs réduits pour EV. ZFE sans restriction. Réseau de tramway et recharge bien développé.'},
     'Nantes':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV avec tarifs préférentiels dans parkings Nantes Métropole. ZFE accessible librement. Infrastructure de recharge en croissance.'},
@@ -1233,28 +1417,6 @@ function sendToTesla(lat, lon, name) {
     btn.style.color = '#fff';
   }, 2500);
 }
-
-// ── TEST BUTTON ──
-document.getElementById('btn-test').addEventListener('click', async () => {
-  const box = document.getElementById('test-results');
-  box.style.display = 'block';
-  box.innerHTML = '⏳ Test in corso…';
-  const results = [];
-  const test = async (name, url) => {
-    try {
-      const r = await fetch(url, {signal: AbortSignal.timeout(6000)});
-      results.push(`${r.ok ? '✅' : '⚠️'} ${name}: HTTP ${r.status}`);
-    } catch(e) {
-      results.push(`❌ ${name}: ${e.message}`);
-    }
-    box.innerHTML = results.join('<br>');
-  };
-  await test('Photon geocoding',      'https://photon.komoot.io/api/?q=Milano&limit=1');
-  await test('Nominatim geocoding',   'https://nominatim.openstreetmap.org/search?q=Roma&format=json&limit=1');
-  await test('OSRM routing',          'https://router.project-osrm.org/route/v1/driving/9.19,45.46;12.49,41.89?overview=false');
-  await test('Supercharge.info',      'https://supercharge.info/service/supercharge/allSites');
-  await test('Overpass (parcheggi)', 'https://overpass-api.de/api/interpreter?data=%5Bout%3Ajson%5D%3Bnode%5Bamenity%3Dparking%5D(45.46,9.18,45.47,9.19)%3Bout+1%3B');
-});
 
 // ── SW ──
 if('serviceWorker' in navigator){
