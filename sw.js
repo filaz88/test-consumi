@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ugo-isotta-v3';
+const CACHE_NAME = 'ugo-isotta-v4';
 const ASSETS = [
   './simulatore-ev-google.html',
   './manifest.json',
