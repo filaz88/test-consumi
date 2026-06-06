@@ -127,6 +127,12 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
 
 .note { font-size:0.7rem; color:var(--muted); line-height:1.6; padding:0.75rem 1rem; background:rgba(0,212,255,0.04); border-left:2px solid var(--accent); border-radius:0 8px 8px 0; }
 .note strong { color:var(--accent); }
+.food-list { display:flex; flex-direction:column; gap:0.5rem; margin-top:0.8rem; }
+.food-item { display:flex; gap:0.8rem; align-items:flex-start; padding:0.75rem; background:var(--surface); border-radius:10px; border-left:3px solid var(--warn); }
+.food-icon { font-size:1rem; flex-shrink:0; line-height:1.4; }
+.food-name { font-size:0.82rem; font-weight:500; color:var(--text); }
+.food-detail { font-family:var(--mono); font-size:0.62rem; color:var(--muted); margin-top:0.2rem; }
+.food-detail span { color:var(--warn); }
 @keyframes pulse {
   0%,100% { box-shadow:0 0 8px #00d4ff; transform:scale(1); }
   50%      { box-shadow:0 0 18px #00d4ff; transform:scale(1.2); }
@@ -662,6 +668,61 @@ document.getElementById('sl-sc').addEventListener('input', function() {
 });
 
 // ── MAIN CALC ──
+// ── CERCA RISTORANTI VICINO AL SUPERCHARGER ──
+async function fetchFoodNearby(lat, lon, stopName) {
+  const radius = 500; // ~6-7 min a piedi
+  const query = `
+    [out:json][timeout:10];
+    (
+      node["amenity"~"restaurant|cafe|bar|fast_food|pizza|bistro"](around:${radius},${lat},${lon});
+      way["amenity"~"restaurant|cafe|bar|fast_food|pizza|bistro"](around:${radius},${lat},${lon});
+    );
+    out body center 15;
+  `;
+  try {
+    const res = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      body: 'data=' + encodeURIComponent(query)
+    });
+    const data = await res.json();
+    const places = (data.elements || [])
+      .filter(el => el.tags?.name)
+      .map(el => {
+        const t = el.tags;
+        const type = t.amenity === 'restaurant' ? '🍽️'
+          : t.amenity === 'cafe' ? '☕'
+          : t.amenity === 'bar' ? '🍷'
+          : t.amenity === 'fast_food' ? '🍔'
+          : '🍕';
+        const cuisine = t.cuisine ? t.cuisine.replace(/_/g,' ') : '';
+        const elLat = el.lat || el.center?.lat;
+        const elLon = el.lon || el.center?.lon;
+        let distM = 0;
+        if (elLat && elLon) {
+          distM = Math.round(haversine({lat, lon}, {lat:elLat, lon:elLon}) * 1000);
+        }
+        // Rating da OSM (stars o rating tag)
+        const rawRating = t['stars'] || t['rating'] || t['toilets:wheelchair'] || null;
+        const rating = t['stars'] ? parseFloat(t['stars'])
+          : t['rating'] ? parseFloat(t['rating'])
+          : null;
+        const ratingStr = rating && !isNaN(rating) && rating > 0 && rating <= 5
+          ? '⭐ ' + rating.toFixed(1)
+          : null;
+        return { name: t.name, type, cuisine, distM, ratingStr };
+      })
+      .filter(p => p.distM <= 500)
+      .sort((a, b) => {
+        // Prima quelli con rating, poi per distanza
+        if (a.ratingStr && !b.ratingStr) return -1;
+        if (!a.ratingStr && b.ratingStr) return 1;
+        return a.distM - b.distM;
+      })
+      .slice(0, 5);
+    return places;
+  } catch(e) { return []; }
+}
+
 document.getElementById('btn-calc').addEventListener('click', async () => {
   hideErr();
   document.getElementById('results').classList.remove('show');
@@ -901,6 +962,36 @@ document.getElementById('btn-calc').addEventListener('click', async () => {
     }
 
     document.getElementById('results').classList.add('show');
+
+    // Cerca ristoranti vicino a ogni sosta (in background, non blocca)
+    if (stops.length) {
+      stops.forEach(async (s, i) => {
+        const places = await fetchFoodNearby(s.lat, s.lon, s.name);
+        if (!places.length) return;
+        // Trova il div della sosta e aggiungi food section
+        const stopDivs = document.querySelectorAll('#stops-list .stop-item:not(.ok)');
+        if (!stopDivs[i]) return;
+        const foodHtml = `
+          <div style="margin-top:0.8rem;padding-top:0.8rem;border-top:1px solid var(--border)">
+            <div style="font-family:var(--mono);font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem">🍴 Dove mangiare nei dintorni (entro 500m)</div>
+            <div class="food-list">
+              ${places.map(p => `
+                <div class="food-item">
+                  <div class="food-icon">${p.type}</div>
+                  <div>
+                    <div class="food-name">${p.name}</div>
+                    <div class="food-detail">
+                      <span>~${p.distM}m</span>
+                      ${p.cuisine ? ` · ${p.cuisine}` : ''}
+                      ${p.ratingStr ? ` · <span style="color:#ffb300">${p.ratingStr}</span>` : ''}
+                    </div>
+                  </div>
+                </div>`).join('')}
+            </div>
+          </div>`;
+        stopDivs[i].insertAdjacentHTML('beforeend', foodHtml);
+      });
+    }
 
   } catch(e) {
     showErr('❌ ' + e.message + '<br><small style="opacity:0.6">Dettaglio: ' + (e.stack||e.toString()).split('\n')[0] + '</small>');
