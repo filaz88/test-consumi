@@ -291,6 +291,13 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
       </div>
       <input class="ev-range" id="sl-kwh" type="range" min="0.15" max="0.80" step="0.01" value="0.50">
     </div>
+    <div class="slider-group">
+      <div class="slider-header">
+        <span style="color:var(--muted)">Costo ricarica Supercharger</span>
+        <span id="lbl-sc">€ 0,62/kWh</span>
+      </div>
+      <input class="ev-range" id="sl-sc" type="range" min="0.40" max="0.90" step="0.01" value="0.62">
+    </div>
   </div>
 
   <!-- PEDAGGI -->
@@ -430,7 +437,7 @@ function findSCAlongRoute(coords, maxKmOff=25) {
 }
 
 // ── PLAN STOPS ──
-function planStops(distKm, cons, bat, socStart, socMin, scList) {
+function planStops(distKm, cons, bat, socStart, socMin, scList, scRate=0.62) {
   const socPerKm = cons / bat;
   let curSoc = socStart, covKm = 0;
   const stops = [];
@@ -445,7 +452,7 @@ function planStops(distKm, cons, bat, socStart, socMin, scList) {
         socAtArrival:   Math.max(Math.round(socAtSC), 5),
         chargeKwh:      Math.round(chargeKwh*10)/10,
         chargeMin:      Math.round(chargeKwh/sc.kw*60),
-        chargeCost:     chargeKwh * 0.62,
+        chargeCost:     chargeKwh * scRate,
         socAfterCharge: 80,
       });
       curSoc = 80; covKm = scKm;
@@ -650,6 +657,9 @@ async function geolocate() {
 document.getElementById('sl-kwh').addEventListener('input', function() {
   document.getElementById('lbl-kwh').textContent = '€ ' + parseFloat(this.value).toFixed(2).replace('.',',') + '/kWh';
 });
+document.getElementById('sl-sc').addEventListener('input', function() {
+  document.getElementById('lbl-sc').textContent = '€ ' + parseFloat(this.value).toFixed(2).replace('.',',') + '/kWh';
+});
 
 // ── MAIN CALC ──
 document.getElementById('btn-calc').addEventListener('click', async () => {
@@ -673,6 +683,7 @@ document.getElementById('btn-calc').addEventListener('click', async () => {
   const socMin   = parseFloat(document.getElementById('p-min').value)||15;
   const kwh      = parseFloat(document.getElementById('sl-kwh').value)||0.50;
   const tollRate = parseFloat(document.getElementById('p-toll').value)||0.075;
+  const scRate   = parseFloat(document.getElementById('sl-sc').value)||0.62;
 
   const geocode = async q => {
     // Try Photon first — accetta qualsiasi tipo (città, indirizzo, POI)
@@ -757,7 +768,7 @@ document.getElementById('btn-calc').addEventListener('click', async () => {
     const scIcon = L.divIcon({ html:'<div style="width:10px;height:10px;background:#e8263a;border-radius:50%;border:2px solid #fff;box-shadow:0 0 6px #e8263a"></div>', iconAnchor:[5,5], className:'' });
     const scIconStop = L.divIcon({ html:'<div style="width:14px;height:14px;background:#e8263a;border-radius:50%;border:2px solid #fff;box-shadow:0 0 10px #e8263a"></div>', iconAnchor:[7,7], className:'' });
 
-    const { stops, socAtDest } = planStops(distKm, cons, bat, socStart, socMin, scNearby);
+    const { stops, socAtDest } = planStops(distKm, cons, bat, socStart, socMin, scNearby, scRate);
     const stopIds = new Set(stops.map(s=>s.name));
 
     scNearby.forEach(sc => {
@@ -792,14 +803,53 @@ document.getElementById('btn-calc').addEventListener('click', async () => {
       <div class="soc-bar-track"><div class="soc-bar-fill" style="width:${Math.min(socAtDest,100)}%;background:${socColor}"></div></div>
       <div class="soc-labels"><span>0%</span><span style="color:var(--warn)">Min ${socMin}%</span><span>100%</span></div>`;
 
-    // Totale = energia + pedaggi + soste Supercharger
-    const tripCost = energyCost + tollCost + stopCost;
+    // ── CALCOLO COSTI ENERGIA ──
+    // Senza soste: tutti i kWh al costo domestico
+    // Con soste:
+    //   - kWh tratto iniziale (partenza → prima sosta) → costo domestico
+    //   - kWh ricaricati ai Supercharger → costo SC (già in stopCost)
+    //   - kWh tratti successivi alle soste → costo SC (perché parti ricaricato lì)
+    let energyHomeCost = 0;   // kWh a tariffa domestica
+    let energyScCost   = 0;   // kWh a tariffa Supercharger (tratti post-sosta)
+    let costHTML       = '';
 
-    let costHTML = `
-      <div class="cost-row">
-        <span class="cost-label">⚡ Energia (${totalKwh.toFixed(1)} kWh × €${kwh.toFixed(2).replace('.',',')})</span>
-        <span class="cost-val c-energy">${fmtE(energyCost)}</span>
-      </div>`;
+    if (!stops.length) {
+      // Nessuna sosta: tutto al costo domestico
+      energyHomeCost = energyCost;
+      costHTML += `
+        <div class="cost-row">
+          <span class="cost-label">⚡ Energia (${totalKwh.toFixed(1)} kWh × €${kwh.toFixed(2).replace('.',',')})</span>
+          <span class="cost-val c-energy">${fmtE(energyHomeCost)}</span>
+        </div>`;
+    } else {
+      // Tratto iniziale: partenza → prima sosta
+      const firstStopKm  = stops[0].kmOnRoute;
+      const kwhToFirst   = (cons / 100) * firstStopKm;
+      energyHomeCost     = kwhToFirst * kwh;
+
+      // Tratti post-sosta: ogni sosta → sosta successiva (o arrivo) a costo SC
+      let kwhPostStops = 0;
+      for (let i = 0; i < stops.length; i++) {
+        const fromKm = stops[i].kmOnRoute;
+        const toKm   = i < stops.length - 1 ? stops[i+1].kmOnRoute : distKm;
+        kwhPostStops += (cons / 100) * (toKm - fromKm);
+      }
+      energyScCost = kwhPostStops * scRate;
+
+      costHTML += `
+        <div class="cost-row">
+          <span class="cost-label">⚡ Energia domestica (${kwhToFirst.toFixed(1)} kWh × €${kwh.toFixed(2).replace('.',',')})</span>
+          <span class="cost-val c-energy">${fmtE(energyHomeCost)}</span>
+        </div>
+        <div class="cost-row">
+          <span class="cost-label">🔴 Ricarica Supercharger — ${stops.length} sosta${stops.length>1?'e':''}</span>
+          <span class="cost-val" style="color:var(--tesla)">${fmtE(stopCost)}</span>
+        </div>
+        <div class="cost-row">
+          <span class="cost-label">⚡ Energia post-sosta (${kwhPostStops.toFixed(1)} kWh × €${scRate.toFixed(2).replace('.',',')})</span>
+          <span class="cost-val" style="color:var(--tesla)">${fmtE(energyScCost)}</span>
+        </div>`;
+    }
 
     if (hwKm > 0) costHTML += `
       <div class="cost-row">
@@ -807,11 +857,7 @@ document.getElementById('btn-calc').addEventListener('click', async () => {
         <span class="cost-val c-toll">${fmtE(tollCost)}</span>
       </div>`;
 
-    if (stops.length) costHTML += `
-      <div class="cost-row">
-        <span class="cost-label">🔴 Supercharger (${stops.length} sosta${stops.length>1?'e':''} · €0,62/kWh)</span>
-        <span class="cost-val" style="color:var(--tesla)">${fmtE(stopCost)}</span>
-      </div>`;
+    const tripCost = energyHomeCost + energyScCost + stopCost + tollCost;
 
     costHTML += `
       <div class="cost-row total-row">
