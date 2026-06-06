@@ -369,28 +369,32 @@ function setupAC(inputId, ddId) {
     clearTimeout(acTimers[inputId]);
     selected = null;
     const q = inp.value.trim();
-    if (q.length < 3) { dd.classList.remove('open'); dd.innerHTML=''; return; }
+    if (q.length < 2) { dd.classList.remove('open'); dd.innerHTML=''; return; }
     acTimers[inputId] = setTimeout(async () => {
       try {
-        const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5&lang=it`);
+        const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=8&lang=it`);
         const data = await r.json();
-        const features = data?.features || [];
+        const features = (data?.features || [])
+          .filter(x => x.properties?.osm_value !== 'administrative'); // skip pure admin boundaries
         dd.innerHTML = '';
-        if (!features.length) { dd.classList.remove('open'); return; }
+        if (!features.length) {
+          dd.innerHTML = '<div class="ac-item" style="color:var(--muted)">Nessun risultato</div>';
+          dd.classList.add('open'); return;
+        }
         features.forEach(item => {
           const p = item.properties;
           const city    = p.city || p.name || '';
-          const country = p.country || '';
           const state   = p.state || '';
-          const label   = [city, state, country].filter(Boolean).join(', ');
+          const country = p.country || '';
+          const label   = city + (state ? ', ' + state : '') + (country ? ', ' + country : '');
           const el = document.createElement('div');
           el.className = 'ac-item';
-          el.innerHTML = `<strong>${city || p.name}</strong><small>${[state,country].filter(Boolean).join(', ')}</small>`;
+          el.innerHTML = `<strong>${city || p.name}</strong><small>${[state, country].filter(Boolean).join(', ')}</small>`;
           el.addEventListener('mousedown', e => {
             e.preventDefault();
             inp.value = label;
             selected = { lat: item.geometry.coordinates[1], lon: item.geometry.coordinates[0], name: city || p.name };
-            dd.classList.remove('open'); dd.innerHTML='';
+            dd.classList.remove('open'); dd.innerHTML = '';
           });
           dd.appendChild(el);
         });
@@ -400,6 +404,13 @@ function setupAC(inputId, ddId) {
   });
 
   inp.addEventListener('blur', () => setTimeout(()=>dd.classList.remove('open'), 200));
+  // Allow Enter to pick first result
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const first = dd.querySelector('.ac-item');
+      if (first && dd.classList.contains('open')) first.dispatchEvent(new MouseEvent('mousedown'));
+    }
+  });
   inp._sel = () => selected;
 }
 
@@ -435,14 +446,31 @@ document.getElementById('btn-calc').addEventListener('click', async () => {
   const tollRate = parseFloat(document.getElementById('p-toll').value)||0.075;
 
   const geocode = async q => {
-    // Photon (Komoot) — CORS ok, gratuito
-    const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=1&lang=it`);
-    const d = await r.json();
-    const f = d?.features?.[0];
-    if (!f) throw new Error(`Città non trovata: "${q}". Seleziona dal menu a tendina.`);
-    const props = f.properties;
-    const name = props.city || props.name || props.state || q;
-    return { lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0], name };
+    // Try Photon first
+    try {
+      const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5&lang=it`);
+      const d = await r.json();
+      // Prefer results with osm_value = city/town/village
+      const features = d?.features || [];
+      const f = features.find(x => ['city','town','village','municipality'].includes(x.properties?.osm_value))
+             || features[0];
+      if (f) {
+        const props = f.properties;
+        const name = props.city || props.name || q;
+        return { lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0], name };
+      }
+    } catch(e) { /* fallback */ }
+    // Fallback: Nominatim
+    try {
+      const r2 = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&addressdetails=1`);
+      const d2 = await r2.json();
+      if (d2?.length) {
+        const item = d2[0];
+        const name = item.address?.city || item.address?.town || item.address?.village || item.display_name.split(',')[0];
+        return { lat: parseFloat(item.lat), lon: parseFloat(item.lon), name };
+      }
+    } catch(e) { /* fallback */ }
+    throw new Error(`Impossibile trovare "${q}". Prova a scrivere il nome completo e selezionare dal menu a tendina.`);
   };
 
   try {
