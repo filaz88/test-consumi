@@ -376,10 +376,16 @@ function setupAC(inputId, ddId) {
     if (q.length < 2) { dd.classList.remove('open'); dd.innerHTML=''; return; }
     acTimers[inputId] = setTimeout(async () => {
       try {
-        const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=8&lang=it`);
+        const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=10&lang=it`);
         const data = await r.json();
-        const features = (data?.features || [])
-          .filter(x => x.properties?.osm_value !== 'administrative'); // skip pure admin boundaries
+        // Nessun filtro — mostra città, indirizzi, POI, strade
+        // Ordina per rilevanza: city/town prima, poi POI, poi strade/numeri civici
+        const priority = ['city','town','village','suburb','municipality','district','house','street','locality'];
+        const features = (data?.features || []).sort((a,b) => {
+          const ai = priority.indexOf(a.properties?.osm_value);
+          const bi = priority.indexOf(b.properties?.osm_value);
+          return (ai===-1?99:ai) - (bi===-1?99:bi);
+        }).slice(0, 8);
         dd.innerHTML = '';
         if (!features.length) {
           dd.innerHTML = '<div class="ac-item" style="color:var(--muted)">Nessun risultato</div>';
@@ -387,17 +393,37 @@ function setupAC(inputId, ddId) {
         }
         features.forEach(item => {
           const p = item.properties;
-          const city    = p.city || p.name || '';
-          const state   = p.state || '';
+          // Costruisci label completa: nome + via + numero + città + paese
+          const name    = p.name || '';
+          const street  = p.street || '';
+          const housenr = p.housenumber || '';
+          const city    = p.city || p.town || p.village || '';
           const country = p.country || '';
-          const label   = city + (state ? ', ' + state : '') + (country ? ', ' + country : '');
+          // Label principale: per POI/indirizzi mostra nome + strada; per città solo nome
+          const isPlace = ['city','town','village','suburb','municipality','district'].includes(p.osm_value);
+          const mainLabel = isPlace
+            ? name
+            : [name, [street, housenr].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+          const subLabel = isPlace
+            ? [p.state||'', country].filter(Boolean).join(', ')
+            : [city, country].filter(Boolean).join(', ');
+          // Icona tipo
+          const icon = isPlace ? '🏙️'
+            : p.osm_key === 'amenity' || p.osm_key === 'tourism' || p.osm_key === 'shop' ? '📍'
+            : street ? '🏠' : '📌';
+          // Coordinata
+          const lat = item.geometry.coordinates[1];
+          const lon = item.geometry.coordinates[0];
+          // Full label per input
+          const fullLabel = [mainLabel, city, country].filter(Boolean).join(', ');
+          const displayName = mainLabel || city || name;
           const el = document.createElement('div');
           el.className = 'ac-item';
-          el.innerHTML = `<strong>${city || p.name}</strong><small>${[state, country].filter(Boolean).join(', ')}</small>`;
+          el.innerHTML = `<strong>${icon} ${displayName}</strong><small>${subLabel}</small>`;
           el.addEventListener('mousedown', e => {
             e.preventDefault();
-            inp.value = label;
-            selected = { lat: item.geometry.coordinates[1], lon: item.geometry.coordinates[0], name: city || p.name };
+            inp.value = fullLabel;
+            selected = { lat, lon, name: displayName };
             dd.classList.remove('open'); dd.innerHTML = '';
           });
           dd.appendChild(el);
@@ -450,17 +476,15 @@ document.getElementById('btn-calc').addEventListener('click', async () => {
   const tollRate = parseFloat(document.getElementById('p-toll').value)||0.075;
 
   const geocode = async q => {
-    // Try Photon first
+    // Try Photon first — accetta qualsiasi tipo (città, indirizzo, POI)
     try {
       const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5&lang=it`);
       const d = await r.json();
-      // Prefer results with osm_value = city/town/village
       const features = d?.features || [];
-      const f = features.find(x => ['city','town','village','municipality'].includes(x.properties?.osm_value))
-             || features[0];
+      const f = features[0]; // primo risultato Photon
       if (f) {
-        const props = f.properties;
-        const name = props.city || props.name || q;
+        const p = f.properties;
+        const name = p.name || p.city || p.street || q;
         return { lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0], name };
       }
     } catch(e) { /* fallback */ }
