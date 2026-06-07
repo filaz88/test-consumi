@@ -1,0 +1,2154 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ugo &amp; Isotta">
+<meta name="theme-color" content="#080c14">
+<title>Viaggio in elettrico con Ugo &amp; Isotta</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+/* ── FONTS ── */
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+/* ── RESET ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+/* ── THEME VARIABLES ── */
+:root{
+  /* Dark mode (default) */
+  --bg:#08090d;
+  --surface:#0f1117;
+  --card:#14161e;
+  --card2:#1a1d27;
+  --border:rgba(255,255,255,0.07);
+  --border2:rgba(255,255,255,0.04);
+  --accent:#4f9eff;
+  --accent2:#34d399;
+  --warn:#f59e0b;
+  --tesla:#ef4444;
+  --text:#f1f5f9;
+  --text2:#94a3b8;
+  --muted:#475569;
+  --shadow:0 4px 24px rgba(0,0,0,0.4);
+  --shadow-lg:0 8px 48px rgba(0,0,0,0.6);
+  --mono:'Space Mono',monospace;
+  --heading:'Space Grotesk',sans-serif;
+  --body:'Figtree',sans-serif;
+  --radius:16px;
+  --radius-sm:10px;
+  --radius-xs:6px;
+  --glow:0 0 20px rgba(79,158,255,0.15);
+  /* Semantic alpha colors */
+  --accent-a1:rgba(79,158,255,0.06);
+  --accent-a2:rgba(79,158,255,0.12);
+  --accent-a3:rgba(79,158,255,0.20);
+  --accent2-a1:rgba(52,211,153,0.08);
+  --accent2-a2:rgba(52,211,153,0.18);
+  --tesla-a1:rgba(239,68,68,0.08);
+  --tesla-a2:rgba(239,68,68,0.18);
+  --warn-a1:rgba(245,158,11,0.08);
+  --warn-a2:rgba(245,158,11,0.18);
+  --error-a1:rgba(239,68,68,0.06);
+  --error-a2:rgba(239,68,68,0.18);
+  --overlay:rgba(0,0,0,0.5);
+  --map-bg:#0f1117;
+  --btn-text:#ffffff;
+  --hardcoded-white:#ffffff;
+}
+
+/* ── LIGHT MODE ── */
+body.light{
+  --bg:#f0f4ff;
+  --surface:#ffffff;
+  --card:#ffffff;
+  --card2:#f4f7ff;
+  --border:rgba(0,0,0,0.09);
+  --border2:rgba(0,0,0,0.05);
+  --accent:#2563eb;
+  --accent2:#059669;
+  --warn:#b45309;
+  --tesla:#dc2626;
+  --text:#0f172a;
+  --text2:#334155;
+  --muted:#64748b;
+  --shadow:0 2px 16px rgba(0,0,0,0.07);
+  --shadow-lg:0 8px 32px rgba(0,0,0,0.12);
+  --glow:0 0 20px rgba(37,99,235,0.12);
+  --accent-a1:rgba(37,99,235,0.06);
+  --accent-a2:rgba(37,99,235,0.12);
+  --accent-a3:rgba(37,99,235,0.20);
+  --accent2-a1:rgba(5,150,105,0.08);
+  --accent2-a2:rgba(5,150,105,0.18);
+  --tesla-a1:rgba(220,38,38,0.07);
+  --tesla-a2:rgba(220,38,38,0.18);
+  --warn-a1:rgba(180,83,9,0.07);
+  --warn-a2:rgba(180,83,9,0.18);
+  --error-a1:rgba(220,38,38,0.06);
+  --error-a2:rgba(220,38,38,0.18);
+  --overlay:rgba(0,0,0,0.15);
+  --map-bg:#e8eef5;
+  --btn-text:#ffffff;
+  --hardcoded-white:#ffffff;
+}
+
+/* ── BASE ── */
+html{overflow-x:clip;width:100%}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--body);
+  font-size:15px;
+  line-height:1.6;
+  min-height:100vh;
+  padding-bottom:max(3rem,env(safe-area-inset-bottom));
+  -webkit-font-smoothing:antialiased;
+  overflow-x:clip;
+  max-width:100%;
+  transition:background 0.3s,color 0.3s;
+}
+
+/* ── THEME TOGGLE ── */
+.theme-toggle{
+  position:fixed;
+  top:1rem;
+  right:1rem;
+  z-index:1000;
+  width:44px;height:44px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+  font-size:1.1rem;
+  box-shadow:var(--shadow);
+  transition:all 0.2s;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+.theme-toggle:hover{transform:scale(1.1);box-shadow:var(--glow)}
+
+/* ── HERO ── */
+.hero{position:relative;padding:0 0 1.2rem;text-align:center}
+.hero-img{
+  width:100%;display:block;
+  max-height:clamp(160px,38vw,280px);
+  object-fit:cover;object-position:center top;
+  border-radius:0 0 24px 24px;
+  box-shadow:0 8px 40px var(--overlay);
+}
+.hero h1{
+  font-family:var(--heading);
+  font-size:clamp(1.1rem,4.5vw,2rem);
+  font-weight:700;
+  line-height:1.2;
+  color:var(--text);
+  letter-spacing:-0.03em;
+  padding:1rem 1rem 0;
+}
+.hero h1 span{color:var(--accent)}
+.hero h1 span.green{color:var(--accent2)}
+.hero-sub{
+  margin-top:0.4rem;
+  font-size:0.78rem;
+  color:var(--text2);
+  padding:0 1rem;
+  font-family:var(--body);
+  letter-spacing:0.01em;
+}
+
+/* ── CONTAINER ── */
+.container{
+  max-width:660px;
+  margin:0 auto;
+  padding:0 0.85rem 1rem;
+  display:flex;flex-direction:column;gap:0.75rem;
+}
+
+/* ── CARD ── */
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:1.25rem;
+  position:relative;
+  overflow:visible;
+  box-shadow:var(--shadow);
+  transition:background 0.3s,border-color 0.3s,box-shadow 0.3s;
+}
+.card::before{
+  content:'';
+  position:absolute;inset:0;
+  border-radius:var(--radius);
+  background:linear-gradient(135deg,var(--accent-a1) 0%,transparent 60%);
+  pointer-events:none;
+}
+.card-title{
+  font-family:var(--heading);
+  font-size:0.68rem;
+  font-weight:700;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--text2);
+  margin-bottom:1rem;
+  display:flex;align-items:center;gap:0.5rem;
+}
+.card-title::before{
+  content:'';
+  width:3px;height:14px;
+  background:var(--accent);
+  border-radius:2px;
+  flex-shrink:0;
+}
+
+/* ── MAP ── */
+#map{width:100%;height:230px;border-radius:var(--radius-sm);overflow:hidden;background:var(--surface)}
+.leaflet-container{background:var(--map-bg)!important}
+body.light .leaflet-container{background:var(--map-bg)!important}
+
+/* ── ROUTE INPUTS ── */
+.route-wrap{display:flex;flex-direction:column;gap:0.6rem}
+.input-group{position:relative}
+.dot{position:absolute;left:0.9rem;top:50%;transform:translateY(-50%);width:8px;height:8px;border-radius:50%;z-index:2;pointer-events:none}
+.dot-from{background:var(--accent2);box-shadow:0 0 8px var(--accent2)}
+.dot-to{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.ev-input{
+  width:100%;
+  background:var(--surface);
+  border:1.5px solid var(--border);
+  border-radius:var(--radius-sm);
+  color:var(--text);
+  font-family:var(--body);
+  font-size:0.95rem;
+  padding:0.82rem 0.9rem 0.82rem 2.2rem;
+  outline:none;
+  transition:border-color 0.2s,box-shadow 0.2s,background 0.3s;
+  -webkit-appearance:none;
+}
+.ev-input:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-a2);
+}
+.ev-input::placeholder{color:var(--muted);font-size:0.88rem}
+
+
+
+/* ── AUTOCOMPLETE ── */
+.ac-wrap{position:relative;overflow:visible}
+.ac-dropdown{
+  position:absolute;top:calc(100% + 6px);left:0;right:0;
+  background:var(--card);
+  border:1.5px solid var(--border);
+  border-radius:var(--radius-sm);
+  z-index:9999;overflow:hidden;
+  box-shadow:var(--shadow-lg);
+  display:none;
+}
+.ac-dropdown.open{display:block}
+.ac-item{
+  padding:0.7rem 1rem;
+  font-size:0.88rem;color:var(--text);
+  border-bottom:1px solid var(--border2);
+  cursor:pointer;transition:background 0.12s;
+  font-family:var(--body);
+}
+.ac-item:last-child{border-bottom:none}
+.ac-item:hover{background:var(--card2)}
+.ac-item strong{color:var(--accent);font-weight:600}
+.ac-item small{display:block;font-size:0.72rem;color:var(--text2);margin-top:2px}
+
+/* ── PARAMS ── */
+.params-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.65rem}
+.param-item label{
+  display:block;
+  font-family:var(--heading);
+  font-size:0.62rem;font-weight:600;
+  letter-spacing:0.07em;text-transform:uppercase;
+  color:var(--text2);margin-bottom:0.35rem;
+}
+.param-input{
+  width:100%;
+  background:var(--surface);
+  border:1.5px solid var(--border);
+  border-radius:var(--radius-xs);
+  color:var(--accent);
+  font-family:var(--mono);
+  font-size:1rem;font-weight:700;
+  padding:0.65rem 0.8rem;
+  outline:none;-webkit-appearance:none;
+  transition:border-color 0.2s,background 0.3s;
+}
+.param-input:focus{border-color:var(--accent)}
+.param-unit{font-family:var(--body);font-size:0.65rem;color:var(--text2);margin-top:0.25rem}
+
+/* ── SLIDERS ── */
+.slider-group{margin-top:0.85rem}
+.slider-header{
+  display:flex;justify-content:space-between;
+  font-family:var(--heading);
+  font-size:0.62rem;font-weight:600;
+  letter-spacing:0.07em;text-transform:uppercase;
+  color:var(--text2);margin-bottom:0.5rem;
+}
+.slider-header span{color:var(--accent);font-size:0.82rem;font-weight:700;letter-spacing:0}
+.ev-range{
+  width:100%;appearance:none;
+  height:5px;
+  background:var(--border);
+  border-radius:3px;outline:none;cursor:pointer;
+  transition:background 0.3s;
+}
+.ev-range::-webkit-slider-thumb{
+  appearance:none;
+  width:18px;height:18px;
+  background:var(--accent);
+  border-radius:50%;
+  box-shadow:0 0 0 3px var(--accent-a3);
+  cursor:pointer;
+  transition:transform 0.15s;
+}
+.ev-range::-webkit-slider-thumb:hover{transform:scale(1.2)}
+
+/* ── BUTTONS ── */
+.btn-calc{
+  width:100%;
+  background:var(--accent);
+  color:var(--btn-text);
+  font-family:var(--heading);
+  font-size:0.95rem;font-weight:700;
+  letter-spacing:0.01em;
+  border:none;border-radius:var(--radius-sm);
+  padding:0.95rem;
+  cursor:pointer;
+  transition:all 0.2s;
+  box-shadow:0 4px 16px var(--accent-a3);
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+.btn-calc:hover{transform:translateY(-2px);box-shadow:0 6px 24px var(--accent-a3)}
+.btn-calc:active{transform:translateY(0)}
+.btn-calc:disabled{opacity:0.5;cursor:not-allowed;transform:none;box-shadow:none}
+body.light .btn-calc{color:var(--btn-text)}
+
+/* ── SPINNER ── */
+.spinner-wrap{display:flex;align-items:center;justify-content:center;gap:0.8rem;padding:1rem}
+.spinner{
+  width:22px;height:22px;
+  border:2.5px solid var(--border);
+  border-top-color:var(--accent);
+  border-radius:50%;
+  animation:spin 0.6s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{box-shadow:0 0 8px var(--accent)}50%{box-shadow:0 0 20px var(--accent)}}
+
+/* ── ERROR ── */
+.error-box{
+  background:var(--error-a1);
+  border:1.5px solid var(--error-a2);
+  border-radius:var(--radius-sm);
+  padding:0.9rem 1rem;
+  font-size:0.82rem;color:var(--tesla);
+  display:none;line-height:1.5;
+}
+.error-box.show{display:block}
+
+/* ── RESULTS ── */
+.results{display:none;flex-direction:column;gap:0.75rem}
+.results.show{display:flex}
+
+/* ── SOC BAR ── */
+.soc-bar-track{
+  width:100%;height:8px;
+  background:var(--border);
+  border-radius:4px;overflow:hidden;margin-top:0.5rem;
+}
+.soc-bar-fill{height:100%;border-radius:4px;transition:width 0.8s cubic-bezier(0.4,0,0.2,1)}
+.soc-labels{
+  display:flex;justify-content:space-between;
+  font-family:var(--body);font-size:0.68rem;
+  color:var(--text2);margin-top:0.3rem;
+}
+
+/* ── SUMMARY STRIP ── */
+.summary-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:0.55rem}
+.strip-item{
+  background:var(--card2);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:0.85rem 0.5rem;text-align:center;
+  transition:background 0.3s;
+}
+.strip-val{
+  font-family:var(--heading);
+  font-size:1.35rem;font-weight:700;
+  color:var(--accent);line-height:1;
+}
+.strip-label{
+  font-family:var(--heading);
+  font-size:0.57rem;font-weight:600;
+  letter-spacing:0.07em;text-transform:uppercase;
+  color:var(--text2);margin-top:0.35rem;
+}
+
+/* ── ROUTE BAR ── */
+.route-bar{font-size:0.88rem;color:var(--text2);margin-bottom:0.9rem}
+.route-bar strong{color:var(--text);font-weight:600}
+
+/* ── COST ROWS ── */
+.cost-rows{display:flex;flex-direction:column;gap:0.4rem}
+.cost-row{
+  display:flex;justify-content:space-between;align-items:flex-start;
+  padding:0.65rem 0.8rem;
+  background:var(--card2);
+  border:1px solid var(--border2);
+  border-radius:var(--radius-xs);
+  transition:background 0.3s;
+}
+.cost-row.total-row{
+  background:var(--surface);
+  border:1.5px solid var(--border);
+}
+.cost-label{font-size:0.85rem;color:var(--text);display:flex;flex-direction:column;gap:0.18rem;font-family:var(--body)}
+.cost-note{font-family:var(--body);font-size:0.66rem;color:var(--text2);font-style:italic}
+.cost-val{font-family:var(--mono);font-size:0.88rem;font-weight:700;flex-shrink:0;margin-left:0.5rem}
+.c-energy{color:var(--accent2)}.c-toll{color:var(--warn)}.c-total{color:var(--text);font-size:0.95rem}
+
+/* ── STOPS ── */
+.stops-list{display:flex;flex-direction:column;gap:0.55rem}
+.stop-item{
+  display:flex;gap:0.85rem;
+  padding:0.85rem;
+  background:var(--card2);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  border-left:3px solid var(--tesla);
+  transition:background 0.3s;
+}
+.stop-item.ok{border-left-color:var(--accent2)}
+.stop-icon{font-size:1.05rem;flex-shrink:0;line-height:1.3}
+.stop-name{font-size:0.9rem;font-weight:600;color:var(--text);font-family:var(--heading)}
+.stop-addr{font-size:0.75rem;color:var(--text2);margin-top:2px}
+.stop-detail{font-family:var(--body);font-size:0.73rem;color:var(--text2);margin-top:0.35rem;line-height:1.7}
+.stop-detail span{color:var(--accent2)}
+.stop-detail .tesla-red{color:var(--tesla)}
+.sc-badge{
+  display:inline-flex;align-items:center;gap:0.2rem;
+  font-family:var(--heading);font-size:0.56rem;font-weight:700;
+  letter-spacing:0.08em;text-transform:uppercase;
+  background:var(--tesla-a1);
+  border:1px solid var(--tesla-a2);
+  color:var(--tesla);border-radius:20px;
+  padding:0.15rem 0.5rem;margin-bottom:0.35rem;
+}
+
+/* ── FOOD ── */
+.food-list{display:flex;flex-direction:column;gap:0.45rem;margin-top:0.75rem}
+.food-item{
+  display:flex;gap:0.75rem;align-items:flex-start;
+  padding:0.7rem 0.8rem;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:var(--radius-xs);
+  border-left:3px solid var(--warn);
+}
+.food-icon{font-size:0.95rem;flex-shrink:0;line-height:1.4}
+.food-name{font-size:0.85rem;font-weight:600;color:var(--text);font-family:var(--body)}
+.food-detail{font-family:var(--body);font-size:0.7rem;color:var(--text2)}
+.food-detail span{color:var(--warn)}
+
+/* ── NOTE ── */
+.note{
+  font-size:0.76rem;color:var(--text2);line-height:1.7;
+  padding:0.8rem 1rem;
+  background:var(--accent-a1);
+  border-left:2.5px solid var(--accent);
+  border-radius:0 var(--radius-xs) var(--radius-xs) 0;
+  font-family:var(--body);
+}
+.note strong{color:var(--accent)}
+
+/* ── PARKING ── */
+.parking-item{
+  display:flex;gap:0.75rem;padding:0.75rem 0.8rem;
+  background:var(--card2);border:1px solid var(--border2);
+  border-radius:var(--radius-sm);
+  border-left:3px solid var(--accent);margin-bottom:0.45rem;
+}
+.parking-icon{font-size:1rem;flex-shrink:0;line-height:1.3}
+.parking-name{font-size:0.85rem;font-weight:600;color:var(--text);font-family:var(--heading)}
+.parking-detail{font-size:0.72rem;color:var(--text2);margin-top:0.22rem;line-height:1.6}
+.parking-fee{
+  display:inline-block;font-family:var(--mono);
+  font-size:0.68rem;padding:0.12rem 0.45rem;
+  border-radius:20px;margin-top:0.28rem;font-weight:700;
+}
+.fee-free{background:var(--accent2-a1);color:var(--accent2);border:1px solid var(--accent2-a2)}
+.fee-paid{background:var(--warn-a1);color:var(--warn);border:1px solid var(--warn-a2)}
+.fee-unknown{background:var(--card2);color:var(--text2);border:1px solid var(--border)}
+.policy-box{
+  background:var(--accent-a1);
+  border:1px solid var(--accent-a2);
+  border-radius:var(--radius-sm);
+  padding:0.9rem;margin-bottom:0.85rem;
+  font-size:0.8rem;line-height:1.7;color:var(--text);
+}
+.policy-box .policy-title{
+  font-family:var(--heading);font-weight:700;
+  font-size:0.82rem;color:var(--accent);
+  margin-bottom:0.5rem;display:block;
+}
+
+
+/* ── ROUTE BOX (Google Maps style) ── */
+.route-box{
+  background:var(--surface);
+  border:1.5px solid var(--border);
+  border-radius:var(--radius-sm);
+  overflow:visible;
+  transition:background 0.3s,border-color 0.3s;
+}
+.route-field{position:relative}
+.route-field-inner{
+  display:flex;align-items:center;
+  padding:0.1rem 0.9rem;
+  position:relative;
+}
+.route-icon{
+  color:var(--muted);
+  flex-shrink:0;
+  margin-right:0.7rem;
+}
+.route-input{
+  flex:1;
+  background:transparent;
+  border:none;
+  color:var(--text);
+  font-family:var(--body);
+  font-size:1rem;
+  padding:0.95rem 0;
+  outline:none;
+  -webkit-appearance:none;
+  min-width:0;
+}
+.route-input::placeholder{color:var(--muted)}
+.route-geo-btn{
+  background:none;border:none;cursor:pointer;
+  font-size:1.05rem;color:var(--accent);
+  flex-shrink:0;padding:0 0 0 0.5rem;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+.route-divider{
+  height:1.5px;
+  background:var(--border);
+  margin:0 0.9rem;
+  transition:background 0.3s;
+}
+.route-actions{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-top:0.9rem;
+  padding:0 0.3rem;
+}
+.route-action-btn{
+  display:inline-flex;align-items:center;gap:0.5rem;
+  background:none;border:none;cursor:pointer;
+  color:var(--text);
+  font-family:var(--body);
+  font-size:0.95rem;font-weight:500;
+  padding:0.4rem 0.2rem;
+  transition:color 0.2s;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+.route-action-btn svg{color:var(--text2);transition:color 0.2s}
+.route-action-btn:hover{color:var(--accent)}
+.route-action-btn:hover svg{color:var(--accent)}
+#btn-swap.spin svg{transition:transform 0.4s;transform:rotate(180deg)}
+
+
+/* ── WAYPOINTS ── */
+.waypoint-row{
+  display:flex;align-items:center;gap:0.5rem;
+  margin-top:0.6rem;
+  position:relative;
+}
+.waypoint-ac-wrap{flex:1;position:relative;overflow:visible}
+.waypoint-inner{
+  display:flex;align-items:center;
+  background:var(--surface);
+  border:1.5px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:0 0.9rem;
+  transition:border-color 0.2s;
+}
+.waypoint-inner:focus-within{border-color:var(--accent)}
+.waypoint-icon{color:var(--warn);flex-shrink:0;margin-right:0.7rem}
+.waypoint-input{
+  flex:1;background:transparent;border:none;
+  color:var(--text);font-family:var(--body);
+  font-size:0.95rem;padding:0.9rem 0;
+  outline:none;-webkit-appearance:none;min-width:0;
+}
+.waypoint-input::placeholder{color:var(--muted)}
+.waypoint-remove{
+  background:none;border:none;cursor:pointer;
+  color:var(--muted);font-size:1.1rem;padding:0.2rem;
+  line-height:1;transition:color 0.15s;flex-shrink:0;
+  -webkit-tap-highlight-color:transparent;
+}
+.waypoint-remove:hover{color:var(--tesla)}
+
+
+/* ── PARKING TABS ── */
+.parking-tabs{
+  display:flex;gap:0.4rem;flex-wrap:wrap;
+  margin-bottom:0.8rem;
+  border-bottom:1.5px solid var(--border);
+  padding-bottom:0.6rem;
+}
+.parking-tab{
+  background:var(--card2);
+  border:1.5px solid var(--border);
+  border-radius:var(--radius-xs);
+  color:var(--text2);
+  font-family:var(--heading);
+  font-size:0.65rem;font-weight:600;
+  padding:0.35rem 0.7rem;
+  cursor:pointer;
+  transition:all 0.15s;
+  white-space:nowrap;
+  -webkit-tap-highlight-color:transparent;
+}
+.parking-tab.active{
+  background:var(--accent);
+  border-color:var(--accent);
+  color:#fff;
+}
+/* ── SCROLL TO TOP ── */
+.scroll-top{
+  position:fixed;
+  bottom:5rem;
+  right:1rem;
+  z-index:999;
+  width:44px;height:44px;
+  background:var(--accent);
+  border:none;border-radius:50%;
+  color:#fff;
+  font-size:1.2rem;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+  box-shadow:0 4px 16px var(--accent-a3);
+  transition:opacity 0.25s,transform 0.2s;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+  opacity:0;pointer-events:none;
+}
+.scroll-top.visible{opacity:1;pointer-events:auto}
+.scroll-top:hover{transform:translateY(-3px)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:400px){
+  .params-grid{grid-template-columns:1fr}
+  .summary-strip{grid-template-columns:1fr 1fr}
+  .summary-strip .strip-item:last-child{grid-column:span 2}
+}
+
+/* ── LIGHT MODE OVERRIDES ── */
+body.light .cost-row.total-row{background:var(--card2)}
+body.light .ac-item:hover{background:var(--card2)}
+body.light .spinner{border-top-color:var(--accent)}
+body.light .ev-range{background:var(--border)}
+body.light .param-input{background:var(--surface)}
+body.light .ev-input{background:var(--surface)}
+body.light .theme-toggle{background:var(--surface);border-color:var(--border);box-shadow:var(--shadow)}
+body.light .card::before{background:linear-gradient(135deg,var(--accent-a1) 0%,transparent 60%)}
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="toggleTheme()" id="btn-theme" title="Cambia tema">🌙</button>
+<button class="scroll-top" id="btn-scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Torna in cima">↑</button>
+<div class="hero">
+  <img class="hero-img" src="data:image/jpeg;base64,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" alt="Viaggio in elettrico con Ugo e Isotta">
+  <h1>Viaggio in elettrico con <span>Ugo</span> &amp; <span class="green">Isotta</span></h1>
+  <p class="hero-sub">Percorso reale &middot; Consumi &middot; Pedaggi &middot; Supercharger Tesla</p>
+</div>
+
+<div class="container">
+
+  <div class="card" style="overflow:visible;position:relative;z-index:100">
+    <p class="card-title" data-i18n="cardRoute">📍 Percorso</p>
+    <div class="route-box">
+      <div class="ac-wrap route-field">
+        <div class="route-field-inner">
+          <svg class="route-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+          <input id="inp-from" class="route-input" type="text" placeholder="Partenza (es. Milano)" autocomplete="off">
+          <button id="btn-geo" title="Usa posizione attuale" onclick="geolocate()" class="route-geo-btn">📍</button>
+        </div>
+        <div class="ac-dropdown" id="dd-from"></div>
+      </div>
+      <div class="route-divider"></div>
+      <div class="ac-wrap route-field">
+        <div class="route-field-inner">
+          <svg class="route-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V4a1 1 0 0 1 1-1h14l-3 5 3 5H5"></path></svg>
+          <input id="inp-to" class="route-input" type="text" placeholder="Arrivo (es. Ascoli Piceno)" autocomplete="off">
+        </div>
+        <div class="ac-dropdown" id="dd-to"></div>
+      </div>
+    </div>
+    <div id="waypoints-container"></div>
+    <div class="route-actions">
+      <button class="route-action-btn" id="btn-add-waypoint" onclick="addWaypoint()">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        <span>Aggiungi tappa</span>
+      </button>
+      <button class="route-action-btn" id="btn-swap" title="Inverti partenza e arrivo">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+        <span>Inverti</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="card-title" data-i18n="cardCar">🚗 Parametri auto</p>
+    <div class="params-grid">
+      <div class="param-item">
+        <label data-i18n="lblCons">Consumo</label>
+        <input class="param-input" id="p-cons" type="number" value="16" min="8" max="40" step="0.5">
+        <div class="param-unit" data-i18n="unitCons">kWh / 100 km</div>
+      </div>
+      <div class="param-item">
+        <label data-i18n="lblBat">Batteria totale</label>
+        <input class="param-input" id="p-bat" type="number" value="75" min="20" max="150">
+        <div class="param-unit">kWh</div>
+      </div>
+      <div class="param-item">
+        <label data-i18n="lblSoc">Carica attuale</label>
+        <input class="param-input" id="p-soc" type="number" value="80" min="5" max="100">
+        <div class="param-unit" data-i18n="unitSoc">% SOC partenza</div>
+      </div>
+      <div class="param-item">
+        <label data-i18n="lblMin">Soglia minima sosta</label>
+        <input class="param-input" id="p-min" type="number" value="15" min="5" max="30">
+        <div class="param-unit" data-i18n="unitMin">% SOC trigger</div>
+      </div>
+    </div>
+    <div class="slider-group">
+      <div class="slider-header">
+        <span style="color:var(--muted)" data-i18n="lblKwh">Costo energia domestica</span>
+        <span id="lbl-kwh">€ 0,50/kWh</span>
+      </div>
+      <input class="ev-range" id="sl-kwh" type="range" min="0.15" max="0.80" step="0.01" value="0.50">
+    </div>
+    <div class="slider-group">
+      <div class="slider-header">
+        <span style="color:var(--muted)" data-i18n="lblSc">Costo ricarica Supercharger</span>
+        <span id="lbl-sc">€ 0,50/kWh</span>
+      </div>
+      <input class="ev-range" id="sl-sc" type="range" min="0.10" max="0.90" step="0.01" value="0.50">
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="card-title" data-i18n="cardToll">🛣️ Pedaggi autostrada</p>
+    <div class="param-item">
+      <label data-i18n="lblTollRate">Tariffa media autostrada</label>
+      <input class="param-input" id="p-toll" type="number" value="0.075" min="0.01" max="0.30" step="0.001" style="color:var(--warn)">
+      <div class="param-unit" data-i18n="unitToll">€ / km autostradale · % calcolata automaticamente dal percorso</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="card-title" data-i18n="cardThermal">⛽ Confronto auto termica</p>
+    <div class="slider-group">
+      <div class="slider-header">
+        <span style="color:var(--muted)" data-i18n="lblFuel">Costo carburante</span>
+        <span id="lbl-fuel">€ 1,90/L</span>
+      </div>
+      <input class="ev-range" id="sl-fuel" type="range" min="1.40" max="2.50" step="0.01" value="1.90">
+    </div>
+    <div class="slider-group">
+      <div class="slider-header">
+        <span style="color:var(--muted)" data-i18n="lblThCons">Consumo auto termica</span>
+        <span id="lbl-thcons">6,0 L/100km</span>
+      </div>
+      <input class="ev-range" id="sl-thcons" type="range" min="4.0" max="15.0" step="0.1" value="6.0">
+    </div>
+  </div>
+
+  <button class="btn-calc" id="btn-calc">⚡ Calcola percorso</button>
+
+
+
+  <div class="error-box" id="error-box"></div>
+
+  <div id="loading-box" style="display:none">
+    <div class="card"><div class="spinner-wrap">
+      <div class="spinner"></div>
+      <span style="font-family:var(--body);font-size:0.78rem;color:var(--muted)" data-i18n="loading">Caricamento rete Supercharger e calcolo percorso…</span>
+    </div></div>
+  </div>
+
+  <div class="card" style="padding:0.8rem">
+    <div id="map"></div>
+  </div>
+
+  <div class="results" id="results">
+
+    <div class="card">
+      <p class="card-title" data-i18n="cardSummary">📊 Riepilogo percorso</p>
+      <div class="route-bar" id="route-bar"></div>
+      <div class="summary-strip" id="summary-strip"></div>
+      <div id="soc-wrap" style="margin-top:0.8rem"></div>
+    </div>
+
+    <div class="card">
+      <p class="card-title" data-i18n="cardCosts">💰 Costi stimati</p>
+      <div class="cost-rows" id="cost-rows"></div>
+    </div>
+
+    <div class="card">
+      <p class="card-title"><span style="color:var(--tesla)">⚡</span> <span data-i18n="cardStops">Supercharger Tesla sul percorso</span></p>
+      <div class="stops-list" id="stops-list"></div>
+    </div>
+
+    <div class="card" id="card-comparison">
+      <p class="card-title" data-i18n="cardComp">⛽ Confronto con auto termica</p>
+      <div class="cost-rows" id="comparison-rows"></div>
+    </div>
+
+    <div class="card" id="card-parking" style="display:none">
+      <p class="card-title">🅿️ Parcheggi EV a destinazione</p>
+      <div id="parking-content">
+        <div class="spinner-wrap"><div class="spinner"></div><span style="font-family:var(--body);font-size:0.78rem;color:var(--muted)">Ricerca parcheggi in corso…</span></div>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>Fonte dati:</strong> Percorso via OSRM. Mappa OpenStreetMap.
+      Supercharger Tesla live da supercharge.info. Pedaggi stimati sui km autostradali rilevati.
+      CO₂: ISPRA (2,31 kg/L benzina) · GSE 2023 (233 g/kWh mix IT).
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── THEME TOGGLE ──
+function toggleTheme() {
+  var body = document.body;
+  var btn = document.getElementById('btn-theme');
+  body.classList.toggle('light');
+  var isLight = body.classList.contains('light');
+  btn.textContent = isLight ? '🌙' : '☀️';
+  try { localStorage.setItem('theme', isLight ? 'light' : 'dark'); } catch(e){}
+}
+// Restore saved theme
+(function(){
+  try {
+    if(localStorage.getItem('theme') === 'light'){
+      document.body.classList.add('light');
+      document.addEventListener('DOMContentLoaded', function(){
+        var btn = document.getElementById('btn-theme');
+        if(btn) btn.textContent = '🌙';
+      });
+    }
+  } catch(e){}
+})();
+
+// ── I18N ──
+const LANGS = {
+  it: {
+    heroSub:'Percorso reale · Consumi · Pedaggi · Supercharger Tesla',
+    cardRoute:'📍 Percorso',placFrom:'Partenza (es. Milano)',placTo:'Arrivo (es. Ascoli Piceno)',
+    cardCar:'🚗 Parametri auto',lblCons:'Consumo',unitCons:'kWh / 100 km',
+    lblBat:'Batteria totale',lblSoc:'Carica attuale',unitSoc:'% SOC partenza',
+    lblMin:'Soglia minima sosta',unitMin:'% SOC trigger',
+    lblKwh:'Costo energia domestica',lblSc:'Costo ricarica Supercharger',
+    cardToll:'🛣️ Pedaggi autostrada',lblTollRate:'Tariffa media autostrada',
+    unitToll:'€ / km · % calcolata dal percorso',
+    cardThermal:'⛽ Confronto auto termica',lblFuel:'Costo carburante',lblThCons:'Consumo auto termica',
+    btnCalc:'⚡ Calcola percorso',btnTest:'🔧 Test connessione',
+    loading:'Caricamento rete Supercharger e calcolo percorso…',
+    cardSummary:'📊 Riepilogo percorso',cardCosts:'💰 Costi stimati',
+    cardStops:'Supercharger Tesla sul percorso',cardComp:'⛽ Confronto con auto termica',
+    lblKmTot:'km totali',lblDuration:'durata guida',lblKwhTot:'kWh consumati',
+    siteTitle:'Viaggio in elettrico con Ugo & Isotta',
+  },
+  en: {
+    heroSub:'Real route · Consumption · Tolls · Tesla Supercharger',
+    cardRoute:'📍 Route',placFrom:'Departure (e.g. Milan)',placTo:'Arrival (e.g. Ascoli Piceno)',
+    cardCar:'🚗 Car parameters',lblCons:'Consumption',unitCons:'kWh / 100 km',
+    lblBat:'Total battery',lblSoc:'Current charge',unitSoc:'% SOC departure',
+    lblMin:'Min stop threshold',unitMin:'% SOC trigger',
+    lblKwh:'Home energy cost',lblSc:'Supercharger cost',
+    cardToll:'🛣️ Highway tolls',lblTollRate:'Average toll rate',
+    unitToll:'€ / km · % auto-calculated from route',
+    cardThermal:'⛽ Petrol car comparison',lblFuel:'Fuel cost',lblThCons:'Petrol consumption',
+    btnCalc:'⚡ Calculate route',btnTest:'🔧 Test connection',
+    loading:'Loading Supercharger network…',
+    cardSummary:'📊 Route summary',cardCosts:'💰 Estimated costs',
+    cardStops:'Tesla Superchargers on route',cardComp:'⛽ Petrol car comparison',
+    lblKmTot:'total km',lblDuration:'driving time',lblKwhTot:'kWh consumed',
+    siteTitle:'Electric journey with Ugo & Isotta',
+  },
+  fr: {
+    heroSub:'Itinéraire réel · Consommation · Péages · Tesla Supercharger',
+    cardRoute:'📍 Itinéraire',placFrom:'Départ (ex. Milan)',placTo:'Arrivée (ex. Ascoli Piceno)',
+    cardCar:'🚗 Paramètres',lblCons:'Consommation',unitCons:'kWh / 100 km',
+    lblBat:'Batterie totale',lblSoc:'Charge actuelle',unitSoc:'% SOC départ',
+    lblMin:'Seuil minimum',unitMin:'% SOC déclencheur',
+    lblKwh:'Coût énergie maison',lblSc:'Coût Supercharger',
+    cardToll:'🛣️ Péages',lblTollRate:'Tarif moyen',unitToll:'€ / km · % calculé automatiquement',
+    cardThermal:'⛽ Comparaison thermique',lblFuel:'Coût carburant',lblThCons:'Consommation thermique',
+    btnCalc:"⚡ Calculer l'itinéraire",btnTest:'🔧 Test connexion',
+    loading:'Chargement réseau Supercharger…',
+    cardSummary:"📊 Résumé",cardCosts:'💰 Coûts estimés',
+    cardStops:'Superchargers Tesla sur itinéraire',cardComp:'⛽ Comparaison thermique',
+    lblKmTot:'km totaux',lblDuration:'durée conduite',lblKwhTot:'kWh consommés',
+    siteTitle:'Voyage électrique avec Ugo & Isotta',
+  },
+  de: {
+    heroSub:'Echte Route · Verbrauch · Maut · Tesla Supercharger',
+    cardRoute:'📍 Route',placFrom:'Abfahrt (z.B. Mailand)',placTo:'Ankunft (z.B. Ascoli Piceno)',
+    cardCar:'🚗 Fahrzeugparameter',lblCons:'Verbrauch',unitCons:'kWh / 100 km',
+    lblBat:'Gesamtbatterie',lblSoc:'Ladestand',unitSoc:'% SOC Abfahrt',
+    lblMin:'Mindeststoppschwelle',unitMin:'% SOC Auslöser',
+    lblKwh:'Heimstromkosten',lblSc:'Supercharger-Kosten',
+    cardToll:'🛣️ Maut',lblTollRate:'Durchschnittlicher Mautsatz',unitToll:'€ / km · % automatisch berechnet',
+    cardThermal:'⛽ Verbrenner Vergleich',lblFuel:'Kraftstoffkosten',lblThCons:'Verbrennerverbrauch',
+    btnCalc:'⚡ Route berechnen',btnTest:'🔧 Dienste testen',
+    loading:'Supercharger-Netzwerk wird geladen…',
+    cardSummary:'📊 Routenübersicht',cardCosts:'💰 Geschätzte Kosten',
+    cardStops:'Tesla Supercharger auf der Route',cardComp:'⛽ Verbrenner Vergleich',
+    lblKmTot:'km gesamt',lblDuration:'Fahrzeit',lblKwhTot:'kWh verbraucht',
+    siteTitle:'Elektrische Reise mit Ugo & Isotta',
+  },
+  es: {
+    heroSub:'Ruta real · Consumo · Peajes · Tesla Supercharger',
+    cardRoute:'📍 Ruta',placFrom:'Salida (p.ej. Milán)',placTo:'Llegada (p.ej. Ascoli Piceno)',
+    cardCar:'🚗 Parámetros',lblCons:'Consumo',unitCons:'kWh / 100 km',
+    lblBat:'Batería total',lblSoc:'Carga actual',unitSoc:'% SOC salida',
+    lblMin:'Umbral mínimo',unitMin:'% SOC disparador',
+    lblKwh:'Coste energía doméstica',lblSc:'Coste Supercharger',
+    cardToll:'🛣️ Peajes',lblTollRate:'Tarifa media',unitToll:'€ / km · % calculado automáticamente',
+    cardThermal:'⛽ Comparación térmica',lblFuel:'Coste combustible',lblThCons:'Consumo térmico',
+    btnCalc:'⚡ Calcular ruta',btnTest:'🔧 Probar conexión',
+    loading:'Cargando red Supercharger…',
+    cardSummary:'📊 Resumen',cardCosts:'💰 Costes estimados',
+    cardStops:'Superchargers Tesla en ruta',cardComp:'⛽ Comparación térmica',
+    lblKmTot:'km totales',lblDuration:'tiempo conducción',lblKwhTot:'kWh consumidos',
+    siteTitle:'Viaje eléctrico con Ugo & Isotta',
+  },
+};
+
+function getLang() {
+  const code = (navigator.language || navigator.userLanguage || 'it').slice(0,2).toLowerCase();
+  return LANGS[code] || LANGS.en;
+}
+function T(key) { return getLang()[key] || key; }
+
+function applyLang() {
+  const t = getLang();
+  // Title & h1
+  document.title = t.siteTitle;
+  const h1 = document.querySelector('.hero h1');
+  if (h1) h1.innerHTML = t.siteTitle
+    .replace('Ugo','<span>Ugo</span>')
+    .replace('Isotta','<span class="green">Isotta</span>');
+  // hero-sub
+  const sub = document.querySelector('.hero-sub');
+  if (sub) sub.textContent = t.heroSub;
+  // placeholders
+  const f = document.getElementById('inp-from');
+  const a = document.getElementById('inp-to');
+  if (f) f.placeholder = t.placFrom;
+  if (a) a.placeholder = t.placTo;
+  // data-i18n elements
+  document.querySelectorAll('[data-i18n]').forEach(function(el) {
+    if (el.tagName === 'BUTTON' || el.tagName === 'INPUT') return;
+    const v = t[el.dataset.i18n];
+    if (v) el.textContent = v;
+  });
+  // buttons — update text node only, never reassign textContent (breaks listeners)
+  const bc = document.getElementById('btn-calc');
+  if (bc && t.btnCalc) {
+    var updated = false;
+    bc.childNodes.forEach(function(n) {
+      if (n.nodeType === 3 && n.nodeValue.trim()) { n.nodeValue = t.btnCalc; updated = true; }
+    });
+    if (!updated) bc.textContent = t.btnCalc;
+  }
+}
+
+// ── HELPERS ──
+const fmtE  = n => '€ ' + Number(n).toFixed(2).replace('.',',');
+const fmtH  = s => { const h=Math.floor(s/3600),m=Math.floor((s%3600)/60); return h>0?`${h}h ${m}min`:`${m} min`; };
+const showErr = msg => { const b=document.getElementById('error-box'); b.innerHTML=msg; b.classList.add('show'); };
+const hideErr = ()  => document.getElementById('error-box').classList.remove('show');
+
+// ── MAP ──
+const map = L.map('map',{zoomControl:true,attributionControl:false}).setView([44.5,11.3],5);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd'}).addTo(map);
+let routeLayer=null, scMarkersLayer=L.layerGroup().addTo(map);
+
+// ── SUPERCHARGERS ──
+let SUPERCHARGERS=[], scLoaded=false;
+async function loadSuperchargers() {
+  if (scLoaded) return;
+  try {
+    const res = await fetch('https://supercharge.info/service/supercharge/allSites');
+    const all = await res.json();
+    SUPERCHARGERS = all
+      .filter(s=>s.status==='OPEN'&&s.address?.region==='Europe'&&s.gps?.latitude)
+      .map(s=>({
+        name:s.name,
+        addr:[s.address.street,s.address.city,s.address.country].filter(Boolean).join(', '),
+        lat:s.gps.latitude,lon:s.gps.longitude,
+        kw:s.powerKilowatt||150,stalls:s.stallCount||4,
+      }));
+    scLoaded=true;
+  } catch(e) {
+    SUPERCHARGERS=[
+      {name:'Milano (Arese)',addr:'Via G.E. Luraghi 11',lat:45.556,lon:9.073,kw:250,stalls:20},
+      {name:'Bologna',addr:'Via Arcoveggio 49',lat:44.519,lon:11.352,kw:250,stalls:12},
+      {name:'Firenze Nord',addr:'A1 Firenze Nord',lat:43.830,lon:11.168,kw:250,stalls:12},
+      {name:'Roma (Settebagni)',addr:'A1 Settebagni',lat:42.059,lon:12.557,kw:250,stalls:12},
+      {name:'Napoli',addr:"Via Brecce a Sant'Erasmo",lat:40.879,lon:14.291,kw:250,stalls:12},
+    ];
+    scLoaded=true;
+  }
+}
+
+// ── HAVERSINE ──
+function haversine(a,b) {
+  const R=6371,dLat=(b.lat-a.lat)*Math.PI/180,dLon=(b.lon-a.lon)*Math.PI/180;
+  const x=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
+
+// ── FIND SC ALONG ROUTE ──
+function findSCAlongRoute(coords,maxKm=30) {
+  if (!coords?.length) return [];
+  const found=[];
+  SUPERCHARGERS.forEach(sc=>{
+    let minD=Infinity,idx=0;
+    coords.forEach(([lon,lat],i)=>{ const d=haversine({lat,lon},sc); if(d<minD){minD=d;idx=i;} });
+    if(minD<=maxKm) found.push({...sc,progressPct:idx/(coords.length-1),deviationKm:minD});
+  });
+  found.sort((a,b)=>a.progressPct-b.progressPct);
+  const out=[];
+  found.forEach(sc=>{ if(!out.length||Math.abs(sc.progressPct-out[out.length-1].progressPct)>0.04) out.push(sc); });
+  return out;
+}
+
+// ── PLAN STOPS ──
+function planStops(distKm,cons,bat,socStart,socMin,scList,scRate) {
+  const socPerKm=cons/bat;
+  let curSoc=socStart,covKm=0;
+  const stops=[];
+  scList.forEach(sc=>{
+    const scKm=sc.progressPct*distKm;
+    const socAtSC=curSoc-(scKm-covKm)*socPerKm;
+    if(socAtSC<=socMin+5){
+      const chargeKwh=bat*(80-Math.max(socAtSC,5))/100;
+      stops.push({...sc,kmOnRoute:Math.round(scKm),socAtArrival:Math.max(Math.round(socAtSC),5),
+        chargeKwh:Math.round(chargeKwh*10)/10,chargeMin:Math.round(chargeKwh/sc.kw*60),
+        chargeCost:chargeKwh*scRate,socAfterCharge:80});
+      curSoc=80;covKm=scKm;
+    }
+  });
+  const socAtDest=Math.max(0,curSoc-(distKm-covKm)*socPerKm);
+  return {stops,socAtDest:Math.round(socAtDest)};
+}
+
+// ── FOOD NEARBY ──
+async function fetchFoodNearby(lat,lon) {
+  const q=`[out:json][timeout:8];(node["amenity"~"restaurant|cafe|bar|fast_food"](around:500,${lat},${lon});way["amenity"~"restaurant|cafe|bar|fast_food"](around:500,${lat},${lon}););out body center 10;`;
+  try {
+    const res=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(q)});
+    const data=await res.json();
+    return (data.elements||[]).filter(el=>el.tags?.name).map(el=>{
+      const t=el.tags;
+      const type=t.amenity==='restaurant'?'🍽️':t.amenity==='cafe'?'☕':t.amenity==='bar'?'🍷':'🍔';
+      const elLat=el.lat||el.center?.lat,elLon=el.lon||el.center?.lon;
+      const distM=elLat?Math.round(haversine({lat,lon},{lat:elLat,lon:elLon})*1000):0;
+      const rating=t.stars?parseFloat(t.stars):null;
+      return {name:t.name,type,cuisine:(t.cuisine||'').replace(/_/g,' '),distM,ratingStr:rating&&rating>0?'⭐'+rating.toFixed(1):null};
+    }).filter(p=>p.distM<=500).sort((a,b)=>a.distM-b.distM).slice(0,5);
+  } catch(e) { return []; }
+}
+
+
+// ── DATABASE LOCALE CITTÀ (prefix search istantaneo) ──
+const CITIES_DB = [
+  // ITALIA — tutte le province e comuni principali
+  {n:'Agrigento',r:'Sicilia',c:'IT',lat:37.311,lon:13.576},
+  {n:'Alessandria',r:'Piemonte',c:'IT',lat:44.913,lon:8.615},
+  {n:'Ancona',r:'Marche',c:'IT',lat:43.617,lon:13.517},
+  {n:'Andria',r:'Puglia',c:'IT',lat:41.227,lon:16.294},
+  {n:'Aosta',r:'Valle d\'Aosta',c:'IT',lat:45.737,lon:7.315},
+  {n:'Arezzo',r:'Toscana',c:'IT',lat:43.463,lon:11.880},
+  {n:'Ascoli Piceno',r:'Marche',c:'IT',lat:42.854,lon:13.575},
+  {n:'Asti',r:'Piemonte',c:'IT',lat:44.900,lon:8.206},
+  {n:'Avellino',r:'Campania',c:'IT',lat:40.914,lon:14.790},
+  {n:'Bari',r:'Puglia',c:'IT',lat:41.117,lon:16.872},
+  {n:'Barletta',r:'Puglia',c:'IT',lat:41.317,lon:16.283},
+  {n:'Belluno',r:'Veneto',c:'IT',lat:46.137,lon:12.217},
+  {n:'Benevento',r:'Campania',c:'IT',lat:41.130,lon:14.783},
+  {n:'Bergamo',r:'Lombardia',c:'IT',lat:45.695,lon:9.670},
+  {n:'Biella',r:'Piemonte',c:'IT',lat:45.567,lon:8.050},
+  {n:'Bologna',r:'Emilia-Romagna',c:'IT',lat:44.494,lon:11.343},
+  {n:'Bolzano',r:'Trentino-Alto Adige',c:'IT',lat:46.498,lon:11.356},
+  {n:'Brescia',r:'Lombardia',c:'IT',lat:45.541,lon:10.212},
+  {n:'Brindisi',r:'Puglia',c:'IT',lat:40.636,lon:17.943},
+  {n:'Cagliari',r:'Sardegna',c:'IT',lat:39.223,lon:9.122},
+  {n:'Caltanissetta',r:'Sicilia',c:'IT',lat:37.490,lon:14.062},
+  {n:'Campobasso',r:'Molise',c:'IT',lat:41.563,lon:14.656},
+  {n:'Carrara',r:'Toscana',c:'IT',lat:44.079,lon:10.099},
+  {n:'Caserta',r:'Campania',c:'IT',lat:41.074,lon:14.332},
+  {n:'Catania',r:'Sicilia',c:'IT',lat:37.502,lon:15.087},
+  {n:'Catanzaro',r:'Calabria',c:'IT',lat:38.910,lon:16.588},
+  {n:'Cesena',r:'Emilia-Romagna',c:'IT',lat:44.134,lon:12.242},
+  {n:'Chieti',r:'Abruzzo',c:'IT',lat:42.351,lon:14.168},
+  {n:'Como',r:'Lombardia',c:'IT',lat:45.810,lon:9.085},
+  {n:'Cosenza',r:'Calabria',c:'IT',lat:39.299,lon:16.253},
+  {n:'Cremona',r:'Lombardia',c:'IT',lat:45.133,lon:10.022},
+  {n:'Crotone',r:'Calabria',c:'IT',lat:39.082,lon:17.128},
+  {n:'Cuneo',r:'Piemonte',c:'IT',lat:44.386,lon:7.542},
+  {n:'Enna',r:'Sicilia',c:'IT',lat:37.566,lon:14.275},
+  {n:'Fermo',r:'Marche',c:'IT',lat:43.160,lon:13.718},
+  {n:'Ferrara',r:'Emilia-Romagna',c:'IT',lat:44.835,lon:11.620},
+  {n:'Firenze',r:'Toscana',c:'IT',lat:43.769,lon:11.256},
+  {n:'Foggia',r:'Puglia',c:'IT',lat:41.462,lon:15.549},
+  {n:'Forlì',r:'Emilia-Romagna',c:'IT',lat:44.222,lon:12.040},
+  {n:'Frosinone',r:'Lazio',c:'IT',lat:41.640,lon:13.343},
+  {n:'Genova',r:'Liguria',c:'IT',lat:44.405,lon:8.946},
+  {n:'Gorizia',r:'Friuli-Venezia Giulia',c:'IT',lat:45.940,lon:13.622},
+  {n:'Grosseto',r:'Toscana',c:'IT',lat:42.760,lon:11.108},
+  {n:'Imperia',r:'Liguria',c:'IT',lat:43.885,lon:8.027},
+  {n:'Isernia',r:'Molise',c:'IT',lat:41.599,lon:14.231},
+  {n:'L\'Aquila',r:'Abruzzo',c:'IT',lat:42.354,lon:13.400},
+  {n:'La Spezia',r:'Liguria',c:'IT',lat:44.105,lon:9.824},
+  {n:'Latina',r:'Lazio',c:'IT',lat:41.468,lon:12.904},
+  {n:'Lecce',r:'Puglia',c:'IT',lat:40.352,lon:18.175},
+  {n:'Lecco',r:'Lombardia',c:'IT',lat:45.856,lon:9.397},
+  {n:'Livorno',r:'Toscana',c:'IT',lat:43.548,lon:10.311},
+  {n:'Lodi',r:'Lombardia',c:'IT',lat:45.314,lon:9.503},
+  {n:'Lucca',r:'Toscana',c:'IT',lat:43.843,lon:10.508},
+  {n:'Macerata',r:'Marche',c:'IT',lat:43.300,lon:13.453},
+  {n:'Mantova',r:'Lombardia',c:'IT',lat:45.156,lon:10.791},
+  {n:'Massa',r:'Toscana',c:'IT',lat:44.034,lon:10.140},
+  {n:'Matera',r:'Basilicata',c:'IT',lat:40.666,lon:16.604},
+  {n:'Messina',r:'Sicilia',c:'IT',lat:38.193,lon:15.554},
+  {n:'Milano',r:'Lombardia',c:'IT',lat:45.464,lon:9.190},
+  {n:'Modena',r:'Emilia-Romagna',c:'IT',lat:44.647,lon:10.925},
+  {n:'Monza',r:'Lombardia',c:'IT',lat:45.584,lon:9.274},
+  {n:'Napoli',r:'Campania',c:'IT',lat:40.852,lon:14.268},
+  {n:'Novara',r:'Piemonte',c:'IT',lat:45.447,lon:8.622},
+  {n:'Nuoro',r:'Sardegna',c:'IT',lat:40.321,lon:9.332},
+  {n:'Oristano',r:'Sardegna',c:'IT',lat:39.906,lon:8.591},
+  {n:'Padova',r:'Veneto',c:'IT',lat:45.407,lon:11.876},
+  {n:'Palermo',r:'Sicilia',c:'IT',lat:38.116,lon:13.361},
+  {n:'Parma',r:'Emilia-Romagna',c:'IT',lat:44.801,lon:10.328},
+  {n:'Pavia',r:'Lombardia',c:'IT',lat:45.185,lon:9.156},
+  {n:'Perugia',r:'Umbria',c:'IT',lat:43.112,lon:12.388},
+  {n:'Pesaro',r:'Marche',c:'IT',lat:43.910,lon:12.913},
+  {n:'Pescara',r:'Abruzzo',c:'IT',lat:42.463,lon:14.214},
+  {n:'Piacenza',r:'Emilia-Romagna',c:'IT',lat:45.052,lon:9.693},
+  {n:'Pisa',r:'Toscana',c:'IT',lat:43.716,lon:10.396},
+  {n:'Pistoia',r:'Toscana',c:'IT',lat:43.933,lon:10.917},
+  {n:'Pordenone',r:'Friuli-Venezia Giulia',c:'IT',lat:45.958,lon:12.661},
+  {n:'Potenza',r:'Basilicata',c:'IT',lat:40.641,lon:15.799},
+  {n:'Prato',r:'Toscana',c:'IT',lat:43.880,lon:11.097},
+  {n:'Ragusa',r:'Sicilia',c:'IT',lat:36.928,lon:14.731},
+  {n:'Ravenna',r:'Emilia-Romagna',c:'IT',lat:44.416,lon:12.203},
+  {n:'Reggio Calabria',r:'Calabria',c:'IT',lat:38.114,lon:15.661},
+  {n:'Reggio Emilia',r:'Emilia-Romagna',c:'IT',lat:44.697,lon:10.631},
+  {n:'Rieti',r:'Lazio',c:'IT',lat:42.404,lon:12.856},
+  {n:'Rimini',r:'Emilia-Romagna',c:'IT',lat:44.059,lon:12.567},
+  {n:'Roma',r:'Lazio',c:'IT',lat:41.894,lon:12.482},
+  {n:'Rovigo',r:'Veneto',c:'IT',lat:45.070,lon:11.790},
+  {n:'Salerno',r:'Campania',c:'IT',lat:40.676,lon:14.763},
+  {n:'Sassari',r:'Sardegna',c:'IT',lat:40.727,lon:8.559},
+  {n:'Savona',r:'Liguria',c:'IT',lat:44.307,lon:8.481},
+  {n:'Siena',r:'Toscana',c:'IT',lat:43.318,lon:11.331},
+  {n:'Siracusa',r:'Sicilia',c:'IT',lat:37.075,lon:15.287},
+  {n:'Sondrio',r:'Lombardia',c:'IT',lat:46.170,lon:9.873},
+  {n:'Taranto',r:'Puglia',c:'IT',lat:40.474,lon:17.228},
+  {n:'Teramo',r:'Abruzzo',c:'IT',lat:42.659,lon:13.704},
+  {n:'Terni',r:'Umbria',c:'IT',lat:42.563,lon:12.641},
+  {n:'Torino',r:'Piemonte',c:'IT',lat:45.070,lon:7.687},
+  {n:'Trapani',r:'Sicilia',c:'IT',lat:37.869,lon:12.538},
+  {n:'Trento',r:'Trentino-Alto Adige',c:'IT',lat:46.067,lon:11.121},
+  {n:'Treviso',r:'Veneto',c:'IT',lat:45.667,lon:12.242},
+  {n:'Trieste',r:'Friuli-Venezia Giulia',c:'IT',lat:45.649,lon:13.777},
+  {n:'Udine',r:'Friuli-Venezia Giulia',c:'IT',lat:46.063,lon:13.235},
+  {n:'Varese',r:'Lombardia',c:'IT',lat:45.821,lon:8.825},
+  {n:'Venezia',r:'Veneto',c:'IT',lat:45.437,lon:12.335},
+  {n:'Verbania',r:'Piemonte',c:'IT',lat:45.923,lon:8.552},
+  {n:'Vercelli',r:'Piemonte',c:'IT',lat:45.320,lon:8.424},
+  {n:'Verona',r:'Veneto',c:'IT',lat:45.438,lon:10.993},
+  {n:'Vibo Valentia',r:'Calabria',c:'IT',lat:38.676,lon:16.100},
+  {n:'Vicenza',r:'Veneto',c:'IT',lat:45.548,lon:11.547},
+  {n:'Viterbo',r:'Lazio',c:'IT',lat:42.417,lon:12.106},
+  // EUROPA
+  {n:'Amsterdam',r:'Noord-Holland',c:'NL',lat:52.373,lon:4.890},
+  {n:'Antwerp',r:'Antwerpen',c:'BE',lat:51.221,lon:4.400},
+  {n:'Athens',r:'Attica',c:'GR',lat:37.983,lon:23.728},
+  {n:'Barcelona',r:'Catalunya',c:'ES',lat:41.385,lon:2.173},
+  {n:'Basel',r:'Basel-Stadt',c:'CH',lat:47.559,lon:7.588},
+  {n:'Belgrade',r:'Serbia',c:'RS',lat:44.802,lon:20.465},
+  {n:'Berlin',r:'Berlin',c:'DE',lat:52.520,lon:13.405},
+  {n:'Bern',r:'Bern',c:'CH',lat:46.948,lon:7.448},
+  {n:'Bilbao',r:'Euskadi',c:'ES',lat:43.263,lon:-2.935},
+  {n:'Bologna',r:'Emilia-Romagna',c:'IT',lat:44.494,lon:11.343},
+  {n:'Bordeaux',r:'Nouvelle-Aquitaine',c:'FR',lat:44.837,lon:-0.580},
+  {n:'Bratislava',r:'Bratislava',c:'SK',lat:48.145,lon:17.107},
+  {n:'Brussels',r:'Brussels',c:'BE',lat:50.850,lon:4.352},
+  {n:'Bucharest',r:'Ilfov',c:'RO',lat:44.430,lon:26.103},
+  {n:'Budapest',r:'Budapest',c:'HU',lat:47.498,lon:19.040},
+  {n:'Copenhagen',r:'Hovedstaden',c:'DK',lat:55.676,lon:12.568},
+  {n:'Dresden',r:'Sachsen',c:'DE',lat:51.050,lon:13.738},
+  {n:'Dublin',r:'Leinster',c:'IE',lat:53.350,lon:-6.266},
+  {n:'Düsseldorf',r:'NRW',c:'DE',lat:51.225,lon:6.782},
+  {n:'Edinburgh',r:'Scotland',c:'GB',lat:55.953,lon:-3.189},
+  {n:'Florence',r:'Toscana',c:'IT',lat:43.769,lon:11.256},
+  {n:'Frankfurt',r:'Hessen',c:'DE',lat:50.110,lon:8.682},
+  {n:'Geneva',r:'Genève',c:'CH',lat:46.205,lon:6.143},
+  {n:'Ghent',r:'Oost-Vlaanderen',c:'BE',lat:51.054,lon:3.718},
+  {n:'Glasgow',r:'Scotland',c:'GB',lat:55.864,lon:-4.252},
+  {n:'Gothenburg',r:'Västra Götaland',c:'SE',lat:57.707,lon:11.967},
+  {n:'Graz',r:'Steiermark',c:'AT',lat:47.070,lon:15.439},
+  {n:'Hamburg',r:'Hamburg',c:'DE',lat:53.551,lon:9.994},
+  {n:'Hannover',r:'Niedersachsen',c:'DE',lat:52.374,lon:9.738},
+  {n:'Helsinki',r:'Uusimaa',c:'FI',lat:60.169,lon:24.938},
+  {n:'Innsbruck',r:'Tirol',c:'AT',lat:47.269,lon:11.404},
+  {n:'Köln',r:'NRW',c:'DE',lat:50.938,lon:6.960},
+  {n:'Krakow',r:'Małopolska',c:'PL',lat:50.062,lon:19.938},
+  {n:'Lausanne',r:'Vaud',c:'CH',lat:46.520,lon:6.634},
+  {n:'Leipzig',r:'Sachsen',c:'DE',lat:51.340,lon:12.375},
+  {n:'Lisbon',r:'Lisboa',c:'PT',lat:38.717,lon:-9.139},
+  {n:'Ljubljana',r:'Ljubljana',c:'SI',lat:46.056,lon:14.505},
+  {n:'London',r:'England',c:'GB',lat:51.507,lon:-0.128},
+  {n:'Luxembourg',r:'Luxembourg',c:'LU',lat:49.612,lon:6.130},
+  {n:'Lyon',r:'Auvergne-Rhône-Alpes',c:'FR',lat:45.748,lon:4.847},
+  {n:'Madrid',r:'Comunidad de Madrid',c:'ES',lat:40.416,lon:-3.703},
+  {n:'Málaga',r:'Andalucía',c:'ES',lat:36.721,lon:-4.421},
+  {n:'Manchester',r:'England',c:'GB',lat:53.480,lon:-2.242},
+  {n:'Marseille',r:'PACA',c:'FR',lat:43.296,lon:5.381},
+  {n:'Milan',r:'Lombardia',c:'IT',lat:45.464,lon:9.190},
+  {n:'Monaco',r:'Monaco',c:'MC',lat:43.738,lon:7.424},
+  {n:'Montpellier',r:'Occitanie',c:'FR',lat:43.611,lon:3.877},
+  {n:'Munich',r:'Bayern',c:'DE',lat:48.137,lon:11.576},
+  {n:'Nantes',r:'Pays de la Loire',c:'FR',lat:47.218,lon:-1.553},
+  {n:'Nice',r:'PACA',c:'FR',lat:43.711,lon:7.262},
+  {n:'Nuremberg',r:'Bayern',c:'DE',lat:49.453,lon:11.077},
+  {n:'Oslo',r:'Oslo',c:'NO',lat:59.913,lon:10.752},
+  {n:'Paris',r:'Île-de-France',c:'FR',lat:48.857,lon:2.352},
+  {n:'Porto',r:'Norte',c:'PT',lat:41.150,lon:-8.611},
+  {n:'Prague',r:'Praha',c:'CZ',lat:50.075,lon:14.438},
+  {n:'Riga',r:'Rīga',c:'LV',lat:56.946,lon:24.106},
+  {n:'Rotterdam',r:'Zuid-Holland',c:'NL',lat:51.924,lon:4.478},
+  {n:'Salzburg',r:'Salzburg',c:'AT',lat:47.800,lon:13.045},
+  {n:'Seville',r:'Andalucía',c:'ES',lat:37.389,lon:-5.984},
+  {n:'Sofia',r:'Sofia',c:'BG',lat:42.698,lon:23.322},
+  {n:'Stockholm',r:'Stockholm',c:'SE',lat:59.333,lon:18.065},
+  {n:'Strasbourg',r:'Grand Est',c:'FR',lat:48.574,lon:7.752},
+  {n:'Stuttgart',r:'Baden-Württemberg',c:'DE',lat:48.776,lon:9.183},
+  {n:'Tallinn',r:'Harju',c:'EE',lat:59.437,lon:24.745},
+  {n:'The Hague',r:'Zuid-Holland',c:'NL',lat:52.079,lon:4.311},
+  {n:'Toulouse',r:'Occitanie',c:'FR',lat:43.605,lon:1.444},
+  {n:'Utrecht',r:'Utrecht',c:'NL',lat:52.091,lon:5.122},
+  {n:'Valencia',r:'Comunitat Valenciana',c:'ES',lat:39.470,lon:-0.376},
+  {n:'Vienna',r:'Wien',c:'AT',lat:48.208,lon:16.373},
+  {n:'Vilnius',r:'Vilnius',c:'LT',lat:54.687,lon:25.280},
+  {n:'Warsaw',r:'Mazowieckie',c:'PL',lat:52.230,lon:21.012},
+  {n:'Zagreb',r:'Zagreb',c:'HR',lat:45.814,lon:15.978},
+  {n:'Zurich',r:'Zürich',c:'CH',lat:47.377,lon:8.541},
+];
+
+function searchLocalCities(q) {
+  const ql = q.toLowerCase().trim();
+  return CITIES_DB
+    .filter(c => c.n.toLowerCase().startsWith(ql) || c.n.toLowerCase().includes(' '+ql))
+    .sort((a,b) => {
+      const as = a.n.toLowerCase().startsWith(ql) ? 0 : 1;
+      const bs = b.n.toLowerCase().startsWith(ql) ? 0 : 1;
+      return as - bs || a.n.localeCompare(b.n);
+    })
+    .slice(0, 8)
+    .map(c => ({
+      geometry: {coordinates: [c.lon, c.lat]},
+      properties: {
+        name: c.n, city: c.n, country: c.c === 'IT' ? 'Italia' : c.c,
+        state: c.r, osm_value: 'city', osm_key: 'place'
+      }
+    }));
+}
+
+
+// ── WAYPOINTS ──
+let waypoints = []; // [{id, value, sel}]
+let wpCounter = 0;
+
+function addWaypoint() {
+  wpCounter++;
+  const id = 'wp-' + wpCounter;
+  waypoints.push({ id, value: '', sel: null });
+  renderWaypoints();
+  // Focus the new input after render
+  setTimeout(() => {
+    const inp = document.getElementById('inp-' + id);
+    if (inp) inp.focus();
+  }, 50);
+}
+
+function removeWaypoint(id) {
+  waypoints = waypoints.filter(w => w.id !== id);
+  renderWaypoints();
+}
+
+function escapeHtml(str) {
+  return (str || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function renderWaypoints() {
+  const container = document.getElementById('waypoints-container');
+  if (!container) return;
+  container.innerHTML = '';
+  waypoints.forEach((wp, idx) => {
+    const row = document.createElement('div');
+    row.className = 'waypoint-row';
+    row.innerHTML = `
+      <div class="waypoint-ac-wrap" id="wrap-${wp.id}">
+        <div class="waypoint-inner">
+          <svg class="waypoint-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/>
+          </svg>
+          <input id="inp-${wp.id}" class="waypoint-input" type="text"
+            placeholder="Tappa ${idx + 1}" autocomplete="off"
+            value="${escapeHtml(wp.value)}">
+        </div>
+        <div class="ac-dropdown" id="dd-${wp.id}"></div>
+      </div>
+      <button class="waypoint-remove" onclick="removeWaypoint('${wp.id}')" title="Rimuovi tappa">✕</button>
+    `;
+    container.appendChild(row);
+    // Wire autocomplete
+    setupAC('inp-' + wp.id, 'dd-' + wp.id);
+    // Sync value + selection back to waypoints array
+    const inp = document.getElementById('inp-' + wp.id);
+    if (inp) {
+      inp.addEventListener('input', function() {
+        const w = waypoints.find(function(x) { return x.id === wp.id; });
+        if (w) { w.value = inp.value; w.sel = null; inp._selOverride = null; }
+      });
+      // Wire _sel so getWaypointSel can retrieve coordinates
+      inp._sel = function() { return inp._selOverride || null; };
+    }
+  });
+}
+
+
+
+function getWaypointSel(wp) {
+  const inp = document.getElementById('inp-' + wp.id);
+  return (inp && inp._sel) ? inp._sel() : wp.sel;
+}
+
+// ── AUTOCOMPLETE ──
+let acTimers={};
+let geoMarker=null;
+
+// Close dropdown on outside click
+document.addEventListener('mousedown',e=>{
+  ['dd-from','dd-to'].forEach(id=>{
+    const dd=document.getElementById(id);
+    const inp=document.getElementById('inp-'+id.replace('dd-',''));
+    if(inp&&dd&&!inp.contains(e.target)&&!dd.contains(e.target)) dd.classList.remove('open');
+  });
+});
+
+function setupAC(inputId, ddId) {
+  var inp = document.getElementById(inputId);
+  var dd  = document.getElementById(ddId);
+  var selected = null;
+  var currentQuery = '';
+
+  function nmToFeature(item) {
+    var a = item.address || {};
+    return {
+      geometry: { coordinates: [parseFloat(item.lon), parseFloat(item.lat)] },
+      properties: {
+        name: a.city||a.town||a.village||a.hamlet||item.display_name.split(',')[0],
+        city: a.city||a.town||a.village||'',
+        country: a.country||'', state: a.state||'',
+        osm_value: item.addresstype||item.type||'city'
+      }
+    };
+  }
+
+  function showItems(features) {
+    dd.innerHTML = '';
+    if (!features || !features.length) {
+      dd.innerHTML = '<div class="ac-item" style="color:var(--muted)">Nessun risultato</div>';
+      dd.classList.add('open');
+      return;
+    }
+    var shown = features.slice(0, 8);
+    shown.forEach(function(item) {
+      var p = item.properties || {};
+      var name    = p.name || p.city || '';
+      var state   = p.state || '';
+      var country = p.country || '';
+      var lat = item.geometry.coordinates[1];
+      var lon = item.geometry.coordinates[0];
+      var sub = [state, country].filter(Boolean).join(', ');
+      var el = document.createElement('div');
+      el.className = 'ac-item';
+      el.innerHTML = '<strong>🏙️ ' + name + '</strong><small>' + sub + '</small>';
+      el.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        inp.value = name + (country ? ', ' + country : '');
+        selected = { lat: lat, lon: lon, name: name };
+        inp._selOverride = selected;
+        dd.classList.remove('open');
+        dd.innerHTML = '';
+      });
+      dd.appendChild(el);
+    });
+    dd.classList.add('open');
+  }
+
+  inp.addEventListener('input', function() {
+    clearTimeout(acTimers[inputId]);
+    selected = null;
+    inp._selOverride = null;
+    var q = inp.value.trim();
+    currentQuery = q;
+    if (q.length < 2) { dd.classList.remove('open'); dd.innerHTML = ''; return; }
+
+    // Mostra subito DB locale
+    var local = searchLocalCities(q);
+    if (local.length > 0) {
+      showItems(local);
+    } else {
+      dd.innerHTML = '<div class="ac-item" style="color:var(--muted)">🔍 Ricerca…</div>';
+      dd.classList.add('open');
+    }
+
+    // Arricchisci con Photon dopo 350ms
+    acTimers[inputId] = setTimeout(function() {
+      if (q !== currentQuery) return;
+      var sq = q.length < 4 ? q + ' ' : q;
+      fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(sq) + '&limit=8&lang=it&lat=44&lon=12&location_bias_scale=0.6')
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(d) {
+          if (q !== currentQuery) return;
+          if (d && d.features && d.features.length) {
+            var seen = {};
+            local.forEach(function(f) { seen[f.properties.name.toLowerCase()] = 1; });
+            var extra = d.features.filter(function(f) {
+              var n = ((f.properties && (f.properties.name || f.properties.city)) || '').toLowerCase();
+              return n && !seen[n];
+            });
+            showItems(local.concat(extra));
+          } else if (local.length === 0) {
+            fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(sq) + '&format=json&limit=6&addressdetails=1&accept-language=it')
+              .then(function(r2) { return r2.ok ? r2.json() : null; })
+              .then(function(d2) {
+                if (q !== currentQuery) return;
+                if (d2 && d2.length) showItems(d2.map(nmToFeature));
+                else { dd.innerHTML = '<div class="ac-item" style="color:var(--muted)">Nessun risultato</div>'; dd.classList.add('open'); }
+              }).catch(function() {});
+          }
+        }).catch(function() {});
+    }, 350);
+  });
+
+  inp.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      var first = dd.querySelector('.ac-item');
+      if (first && dd.classList.contains('open')) first.dispatchEvent(new MouseEvent('mousedown'));
+    }
+    if (e.key === 'Escape') dd.classList.remove('open');
+  });
+
+  inp._sel = function() { return inp._selOverride || selected; };
+}
+
+
+setupAC('inp-from','dd-from');
+setupAC('inp-to','dd-to');
+applyLang();
+
+// ── SWAP PARTENZA / ARRIVO ──
+document.getElementById('btn-swap').addEventListener('click', () => {
+  const inpFrom = document.getElementById('inp-from');
+  const inpTo   = document.getElementById('inp-to');
+  const tmpVal = inpFrom.value;
+  inpFrom.value = inpTo.value;
+  inpTo.value   = tmpVal;
+  const tmpSel = inpFrom._selOverride || (inpFrom._sel ? inpFrom._sel() : null);
+  inpFrom._selOverride = inpTo._selOverride || (inpTo._sel ? inpTo._sel() : null);
+  inpTo._selOverride   = tmpSel;
+  const btn = document.getElementById('btn-swap');
+  btn.classList.add('spin');
+  setTimeout(() => btn.classList.remove('spin'), 400);
+});
+
+// ── GEOLOCATION ──
+function geolocate() {
+  const btn=document.getElementById('btn-geo');
+  if(!navigator.geolocation){alert('Geolocalizzazione non supportata.');return;}
+  btn.textContent='⏳';btn.style.pointerEvents='none';
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const lat=pos.coords.latitude,lon=pos.coords.longitude;
+    if(geoMarker) map.removeLayer(geoMarker);
+    const geoIcon=L.divIcon({html:'<div style="width:16px;height:16px;background:var(--accent);border-radius:50%;border:3px solid #fff;box-shadow:0 0 12px #00d4ff;animation:pulse 1.5s infinite"></div>',iconAnchor:[8,8],className:''});
+    geoMarker=L.marker([lat,lon],{icon:geoIcon}).bindPopup('<b>📍 Sei qui</b>').addTo(map);
+    map.setView([lat,lon],12);
+    try {
+      const r=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=it`,{});
+      const d=await r.json();
+      const city=d.address?.city||d.address?.town||d.address?.village||'';
+      const country=d.address?.country||'';
+      const label=[city,country].filter(Boolean).join(', ');
+      const inp=document.getElementById('inp-from');
+      inp.value=label;
+      inp._selOverride={lat,lon,name:city||label};
+    } catch(e) {
+      const inp=document.getElementById('inp-from');
+      inp.value=`${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+      inp._selOverride={lat,lon,name:'Posizione attuale'};
+    }
+    btn.textContent='✅';setTimeout(()=>{btn.textContent='📍';btn.style.pointerEvents='auto';},2000);
+  },err=>{
+    btn.textContent='📍';btn.style.pointerEvents='auto';
+    const msgs={1:'Permesso negato.',2:'Posizione non disponibile.',3:'Timeout.'};
+    alert(msgs[err.code]||'Errore geolocalizzazione.');
+  },{enableHighAccuracy:true,timeout:10000});
+}
+
+// ── SLIDERS ──
+document.getElementById('sl-kwh').addEventListener('input',function(){document.getElementById('lbl-kwh').textContent='€ '+parseFloat(this.value).toFixed(2).replace('.',',')+'/kWh';});
+document.getElementById('sl-sc').addEventListener('input',function(){document.getElementById('lbl-sc').textContent='€ '+parseFloat(this.value).toFixed(2).replace('.',',')+'/kWh';});
+document.getElementById('sl-fuel').addEventListener('input',function(){document.getElementById('lbl-fuel').textContent='€ '+parseFloat(this.value).toFixed(2).replace('.',',')+'/L';});
+document.getElementById('sl-thcons').addEventListener('input',function(){document.getElementById('lbl-thcons').textContent=parseFloat(this.value).toFixed(1).replace('.',',')+' L/100km';});
+
+// ── MAIN CALC ──
+document.getElementById('btn-calc').addEventListener('click',async()=>{
+  hideErr();
+  document.getElementById('results').classList.remove('show');
+  document.getElementById('loading-box').style.display='block';
+  document.getElementById('btn-calc').disabled=true;
+
+  const fromVal=document.getElementById('inp-from').value.trim();
+  const toVal=document.getElementById('inp-to').value.trim();
+  if(!fromVal||!toVal){showErr('Inserisci partenza e arrivo.');document.getElementById('loading-box').style.display='none';document.getElementById('btn-calc').disabled=false;return;}
+
+  const cons=parseFloat(document.getElementById('p-cons').value)||16;
+  const bat=parseFloat(document.getElementById('p-bat').value)||75;
+  const socStart=parseFloat(document.getElementById('p-soc').value)||80;
+  const socMin=parseFloat(document.getElementById('p-min').value)||15;
+  const kwh=parseFloat(document.getElementById('sl-kwh').value)||0.50;
+  const scRate=parseFloat(document.getElementById('sl-sc').value)||0.62;
+  const tollRate=parseFloat(document.getElementById('p-toll').value)||0.075;
+  const fuelPrice=parseFloat(document.getElementById('sl-fuel').value)||1.90;
+  const thCons=parseFloat(document.getElementById('sl-thcons').value)||6.0;
+
+  const geocode=async q=>{
+    // 1. Database locale prima (istantaneo)
+    const local = searchLocalCities(q);
+    if(local.length > 0) {
+      const f = local[0];
+      return {lat:f.geometry.coordinates[1], lon:f.geometry.coordinates[0], name:f.properties.name};
+    }
+    // 2. Photon
+    try{
+      const r=await fetch('https://photon.komoot.io/api/?q='+encodeURIComponent(q)+'&limit=3&lang=it&lat=44&lon=12');
+      const d=await r.json();
+      const f=d?.features?.[0];
+      if(f){const p=f.properties;return{lat:f.geometry.coordinates[1],lon:f.geometry.coordinates[0],name:p.name||p.city||q};}
+    }catch(e){}
+    // 3. Nominatim
+    try{
+      const r=await fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(q)+'&format=json&limit=1&addressdetails=1');
+      const d=await r.json();
+      if(d?.length){const a=d[0].address||{};return{lat:parseFloat(d[0].lat),lon:parseFloat(d[0].lon),name:a.city||a.town||d[0].display_name.split(',')[0]};}
+    }catch(e){}
+    throw new Error('Città non trovata: "'+q+'". Seleziona dal menu a tendina.');
+  };
+
+  try{
+    const fromSel=document.getElementById('inp-from')._sel();
+    const toSel=document.getElementById('inp-to')._sel();
+    const from=fromSel||await geocode(fromVal);
+    const to=toSel||await geocode(toVal);
+
+    // OSRM routing
+    // Resolve all waypoints (local sel or geocode)
+    const resolvedWP = [];
+    for (const wp of waypoints) {
+      let sel = getWaypointSel(wp);
+      if (!sel && wp.value.trim()) {
+        try {
+          sel = await geocode(wp.value.trim());
+          const inp = document.getElementById('inp-' + wp.id);
+          if (inp) inp._selOverride = sel;
+          wp.sel = sel;
+        } catch(e) { /* skip unresolvable waypoints */ }
+      }
+      if (sel) resolvedWP.push(`${sel.lon},${sel.lat}`);
+    }
+
+    const allCoords = [
+      `${from.lon},${from.lat}`,
+      ...resolvedWP,
+      `${to.lon},${to.lat}`
+    ].join(';');
+
+    const osrmRes=await fetch(`https://router.project-osrm.org/route/v1/driving/${allCoords}?overview=full&geometries=geojson&steps=true`);
+    if(!osrmRes.ok) throw new Error('Routing non disponibile ('+osrmRes.status+')');
+    const osrmData=await osrmRes.json();
+    if(osrmData.code!=='Ok'||!osrmData.routes?.length) throw new Error('Percorso non trovato. Prova con città diverse.');
+
+    const route=osrmData.routes[0];
+    const leg=route.legs[0];
+    const distKm=route.distance/1000;
+    const durSec=route.duration;
+    const geom=route.geometry.coordinates;
+    const steps=leg.steps||[];
+
+    // Draw route
+    if(routeLayer) map.removeLayer(routeLayer);
+    scMarkersLayer.clearLayers();
+    const latLngs=geom.map(([lon,lat])=>[lat,lon]);
+    routeLayer=L.polyline(latLngs,{color:'var(--accent)',weight:4,opacity:0.85}).addTo(map);
+    const iconFrom=L.divIcon({html:'<div style="width:12px;height:12px;background:var(--accent2);border-radius:50%;border:2px solid #fff;box-shadow:0 0 8px #00ff9d"></div>',iconAnchor:[6,6],className:''});
+    const iconTo=L.divIcon({html:'<div style="width:12px;height:12px;background:var(--accent);border-radius:50%;border:2px solid #fff;box-shadow:0 0 8px #00d4ff"></div>',iconAnchor:[6,6],className:''});
+    L.marker([from.lat,from.lon],{icon:iconFrom}).bindPopup(`<b>Partenza:</b> ${from.name}`).addTo(scMarkersLayer);
+    L.marker([to.lat,to.lon],{icon:iconTo}).bindPopup(`<b>Arrivo:</b> ${to.name}`).addTo(scMarkersLayer);
+    map.fitBounds(routeLayer.getBounds(),{padding:[20,20]});
+
+    // Highway km from steps
+    let hwKm=0;
+    steps.forEach(s=>{
+      const nm=(s.name||'').toLowerCase();
+      const ref=(s.ref||'').toLowerCase();
+      const isHw=/motorway|trunk/.test(s.maneuver?.type||'')||/a\d+|e\d+|autostrada|autoroute|autobahn|autopista/.test(nm+' '+ref)||(s.distance>8000&&s.duration>0&&(s.distance/s.duration)>22);
+      if(isHw) hwKm+=s.distance/1000;
+    });
+    hwKm=Math.round(hwKm);
+
+    // Superchargers
+    await loadSuperchargers();
+    const scNearby=findSCAlongRoute(geom,30);
+    const scIcon=L.divIcon({html:'<div style="width:10px;height:10px;background:var(--tesla);border-radius:50%;border:2px solid #fff;box-shadow:0 0 6px #e8263a"></div>',iconAnchor:[5,5],className:''});
+    const scIconStop=L.divIcon({html:'<div style="width:14px;height:14px;background:var(--tesla);border-radius:50%;border:2px solid #fff;box-shadow:0 0 10px #e8263a"></div>',iconAnchor:[7,7],className:''});
+    const {stops,socAtDest}=planStops(distKm,cons,bat,socStart,socMin,scNearby,scRate);
+    const stopNames=new Set(stops.map(s=>s.name));
+    scNearby.forEach(sc=>{
+      L.marker([sc.lat,sc.lon],{icon:stopNames.has(sc.name)?scIconStop:scIcon})
+       .bindPopup(`<b style="color:var(--tesla)">⚡ ${sc.name}</b><br><small>${sc.addr}</small><br><span style="color:var(--accent2)">${sc.stalls} stall · ${sc.kw} kW</span>`)
+       .addTo(scMarkersLayer);
+    });
+
+    // Costs
+    const totalKwh=(cons/100)*distKm;
+    const kwhRicaricatiSC=stops.reduce((s,x)=>s+x.chargeKwh,0);
+    const kwhDomestici=Math.max(0,totalKwh-kwhRicaricatiSC);
+    const energyHomeCost=kwhDomestici*kwh;
+    const energyScCost=kwhRicaricatiSC*scRate;
+    const tollCost=hwKm*tollRate;
+    const tripCost=energyHomeCost+energyScCost+tollCost;
+
+    // Render summary
+    document.getElementById('route-bar').innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem">
+        <span><strong>${from.name}</strong> <span style="color:var(--border)">→</span> <strong>${to.name}</strong></span>
+        <button onclick="sendToTesla(${to.lat},${to.lon},'${to.name.replace(/'/g,String.fromCharCode(39))}',this)"
+          style="display:inline-flex;align-items:center;gap:0.4rem;background:var(--tesla);border:none;border-radius:8px;color:var(--btn-text);font-family:var(--heading);font-size:0.7rem;font-weight:700;padding:0.4rem 0.8rem;cursor:pointer;letter-spacing:0.04em;white-space:nowrap;touch-action:manipulation;-webkit-tap-highlight-color:transparent">
+          ⚡ Invia a Tesla
+        </button>
+      </div>`;
+    document.getElementById('summary-strip').innerHTML=`
+      <div class="strip-item"><div class="strip-val">${Math.round(distKm).toLocaleString('it-IT')}</div><div class="strip-label" data-i18n="lblKmTot">km totali</div></div>
+      <div class="strip-item"><div class="strip-val">${fmtH(durSec)}</div><div class="strip-label" data-i18n="lblDuration">durata guida</div></div>
+      <div class="strip-item"><div class="strip-val">${totalKwh.toFixed(0)}</div><div class="strip-label" data-i18n="lblKwhTot">kWh consumati</div></div>`;
+
+    // SOC gauge
+    const socColor=socAtDest>=30?'var(--accent2)':socAtDest>=15?'var(--warn)':'var(--tesla)';
+    document.getElementById('soc-wrap').innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.3rem">
+        <span style="font-family:var(--heading);font-size:0.65rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted)">SOC stimato all'arrivo</span>
+        <span style="font-family:var(--heading);font-size:1.6rem;font-weight:800;color:${socColor}">${socAtDest}%</span>
+      </div>
+      <div class="soc-bar-track"><div class="soc-bar-fill" style="width:${Math.min(socAtDest,100)}%;background:${socColor}"></div></div>
+      <div class="soc-labels"><span>0%</span><span style="color:var(--warn)">Min ${socMin}%</span><span>100%</span></div>`;
+
+    // Cost rows
+    let costHTML='';
+    if(!stops.length){
+      costHTML+=`<div class="cost-row"><span class="cost-label">⚡ Energia<span class="cost-note">kWh totali × tariffa domestica</span></span><span class="cost-val c-energy">${fmtE(energyHomeCost)}</span></div>`;
+    }else{
+      costHTML+=`
+        <div class="cost-row"><span class="cost-label">⚡ Energia domestica<span class="cost-note">kWh totali − kWh ricaricati SC × tariffa domestica</span></span><span class="cost-val c-energy">${fmtE(energyHomeCost)}</span></div>
+        <div class="cost-row"><span class="cost-label">🔴 Supercharger<span class="cost-note">kWh ricaricati alle soste × tariffa SC</span></span><span class="cost-val" style="color:var(--tesla)">${fmtE(energyScCost)}</span></div>`;
+    }
+    if(hwKm>0) costHTML+=`<div class="cost-row"><span class="cost-label">🛣️ Pedaggi<span class="cost-note">km autostradali rilevati dal percorso × tariffa €/km</span></span><span class="cost-val c-toll">${fmtE(tollCost)}</span></div>`;
+    costHTML+=`
+      <div class="cost-row total-row"><span class="cost-label"><strong>Totale costi viaggio</strong><span class="cost-note">energia + pedaggi${stops.length?' + SC':''}</span></span><span class="cost-val c-total">${fmtE(tripCost)}</span></div>
+      <div class="cost-row"><span class="cost-label">Costo per km<span class="cost-note">totale ÷ ${Math.round(distKm)} km</span></span><span class="cost-val c-energy">${distKm>0?fmtE(tripCost/distKm):'—'}/km</span></div>`;
+    document.getElementById('cost-rows').innerHTML=costHTML;
+
+    // Stops
+    const sl=document.getElementById('stops-list');
+    if(!stops.length){
+      sl.innerHTML=`<div class="stop-item ok"><div class="stop-icon">✅</div><div><div class="stop-name">Nessuna sosta necessaria</div><div class="stop-detail">SOC all'arrivo: <span>${socAtDest}%</span> — ${Math.round(distKm)} km percorso${scNearby.length?`<br>${scNearby.length} Supercharger trovati lungo il percorso`:''}</div></div></div>`;
+    }else{
+      sl.innerHTML=stops.map(s=>`
+        <div class="stop-item"><div class="stop-icon">🔴</div><div style="flex:1">
+          <div class="sc-badge">⚡ Tesla Supercharger</div>
+          <div class="stop-name">${s.name}</div><div class="stop-addr">${s.addr}</div>
+          <div class="stop-detail">Al km <span>${s.kmOnRoute.toLocaleString('it-IT')}</span> · SOC arrivo: <span class="${s.socAtArrival<socMin?'tesla-red':''}">${s.socAtArrival}%</span><br>
+          Ricarica fino a <span>80%</span> → <span>${s.chargeKwh} kWh</span> · Tempo: <span>~${s.chargeMin} min</span> (${s.kw} kW) · Costo: <span>${fmtE(s.chargeCost)}</span></div>
+        </div></div>`).join('');
+    }
+
+    // Thermal comparison + CO2
+    const thLitri=(thCons/100)*distKm;
+    const thFuelCost=thLitri*fuelPrice;
+    const thTotalCost=thFuelCost+tollCost;
+    const delta=thTotalCost-tripCost;
+    const deltaSign=delta>=0?'+':'';
+    const deltaColor=delta>=0?'var(--accent2)':'var(--tesla)';
+    const pctSaving=thTotalCost>0?Math.round(Math.abs(delta)/thTotalCost*100):0;
+    const thCo2Kg=thLitri*2.31;
+    const evCo2Kg=(totalKwh*233)/1000;
+    const co2Saved=thCo2Kg-evCo2Kg;
+    const co2SavedPct=thCo2Kg>0?Math.round(co2Saved/thCo2Kg*100):0;
+    const co2Color=co2Saved>=0?'var(--accent2)':'var(--tesla)';
+
+    document.getElementById('comparison-rows').innerHTML=`
+      <div class="cost-row"><span class="cost-label">⛽ Carburante (${thLitri.toFixed(1)} L × €${fuelPrice.toFixed(2).replace('.',',')})</span><span class="cost-val c-toll">${fmtE(thFuelCost)}</span></div>
+      <div class="cost-row"><span class="cost-label">🛣️ Pedaggi (stessa autostrada)</span><span class="cost-val c-toll">${fmtE(tollCost)}</span></div>
+      <div class="cost-row total-row"><span class="cost-label"><strong>Totale auto termica</strong></span><span class="cost-val" style="color:var(--warn)">${fmtE(thTotalCost)}</span></div>
+      <div class="cost-row" style="background:var(--accent2-a1);border:1px solid rgba(0,255,157,0.15);border-radius:10px">
+        <span class="cost-label"><strong>${delta>=0?'✅ Risparmi con la Tesla':'⚠️ La termica costa meno'}</strong></span>
+        <span class="cost-val" style="color:${deltaColor};font-size:1rem">${deltaSign}${fmtE(Math.abs(delta))} (${pctSaving}%)</span>
+      </div>
+      <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
+        <div style="font-family:var(--heading);font-size:0.65rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:0.6rem">🌿 Emissioni CO₂</div>
+        <div class="cost-row"><span class="cost-label">🌫️ Auto termica (2,31 kg CO₂/L)</span><span class="cost-val" style="color:var(--warn)">${thCo2Kg.toFixed(1)} kg</span></div>
+        <div class="cost-row"><span class="cost-label">⚡ Tesla (mix elettrico IT ~233 g/kWh)</span><span class="cost-val" style="color:var(--accent2)">${evCo2Kg.toFixed(1)} kg</span></div>
+        <div class="cost-row" style="background:var(--accent2-a1);border:1px solid rgba(0,255,157,0.15);border-radius:10px">
+          <span class="cost-label"><strong>${co2Saved>=0?'🌱 CO₂ risparmiata':'⚠️ CO₂ in più'}</strong></span>
+          <span class="cost-val" style="color:${co2Color};font-size:1rem">${Math.abs(co2Saved).toFixed(1)} kg (${co2SavedPct}%)</span>
+        </div>
+        <div style="margin-top:0.5rem;font-family:var(--body);font-size:0.72rem;color:var(--muted)">Fonte: ISPRA (CO₂ benzina) · GSE 2023 (mix elettrico italiano)</div>
+      </div>`;
+
+    document.getElementById('results').classList.add('show');
+
+    // Cerca parcheggi EV per arrivo + eventuali soste (in background)
+    searchEVParking(to.name, to.lat, to.lon, resolvedWP);
+    // Translate dynamic labels
+    applyLang();
+
+    // Food nearby stops (background)
+    if(stops.length){
+      stops.forEach(async(s,i)=>{
+        const places=await fetchFoodNearby(s.lat,s.lon);
+        if(!places.length) return;
+        const stopDivs=document.querySelectorAll('#stops-list .stop-item:not(.ok)');
+        if(!stopDivs[i]) return;
+        stopDivs[i].insertAdjacentHTML('beforeend',`
+          <div style="margin-top:0.8rem;padding-top:0.8rem;border-top:1px solid var(--border)">
+            <div style="font-family:var(--heading);font-size:0.62rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem">🍴 Dove mangiare nei dintorni (entro 500m)</div>
+            <div class="food-list">${places.map(p=>`<div class="food-item"><div class="food-icon">${p.type}</div><div><div class="food-name">${p.name}</div><div class="food-detail"><span>~${p.distM}m</span>${p.cuisine?' · '+p.cuisine:''}${p.ratingStr?' · <span style=\"color:var(--warn)\">'+ p.ratingStr+'</span>':''}</div></div></div>`).join('')}</div>
+          </div>`);
+      });
+    }
+
+  }catch(e){
+    showErr('❌ '+e.message);
+  }finally{
+    document.getElementById('loading-box').style.display='none';
+    document.getElementById('btn-calc').disabled=false;
+  }
+});
+
+// ── PARKING SEARCH ──
+async function searchEVParking(cityName, lat, lon, waypointCoords) {
+  const card = document.getElementById('card-parking');
+  const content = document.getElementById('parking-content');
+  card.style.display = 'block';
+
+  // Build list of locations: arrivo + soste intermedie con nome
+  const locations = [{ name: cityName, lat, lon, label: 'Arrivo' }];
+
+  // Add resolved waypoints if present
+  if (waypointCoords && waypointCoords.length) {
+    waypointCoords.forEach(function(coord, idx) {
+      try {
+        const parts = coord.split(',');
+        const wpLon = parseFloat(parts[0]);
+        const wpLat = parseFloat(parts[1]);
+        if (isNaN(wpLat) || isNaN(wpLon)) return;
+        // Try to get name from waypoints array
+        const wp = waypoints[idx];
+        const wpName = (wp && wp.value) ? wp.value.split(',')[0].trim() : ('Tappa ' + (idx+1));
+        locations.push({ name: wpName, lat: wpLat, lon: wpLon, label: 'Tappa ' + (idx+1) });
+      } catch(e) { /* skip malformed waypoint */ }
+    });
+  }
+
+  // If multiple locations, show tabs
+  if (locations.length > 1) {
+    // Build tab UI
+    let tabHTML = '<div class="parking-tabs">';
+    locations.forEach(function(loc, i) {
+      tabHTML += `<button class="parking-tab${i===0?' active':''}" onclick="switchParkingTab(${i})" id="ptab-${i}">${loc.label}: ${loc.name}</button>`;
+    });
+    tabHTML += '</div><div id="parking-tab-content"></div>';
+    content.innerHTML = tabHTML;
+    // Load first tab
+    window._parkingLocations = locations;
+    loadParkingTab(0);
+  } else {
+    content.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div><span style="font-family:var(--body);font-size:0.78rem;color:var(--muted)">Ricerca parcheggi…</span></div>';
+    const result = await fetchParkingData(cityName, lat, lon);
+    content.innerHTML = result;
+  }
+}
+
+function switchParkingTab(idx) {
+  document.querySelectorAll('.parking-tab').forEach(function(t, i) {
+    t.classList.toggle('active', i === idx);
+  });
+  loadParkingTab(idx).catch(function(e) { console.warn('parking tab error:', e); });
+}
+
+async function loadParkingTab(idx) {
+  if (!window._parkingLocations || !window._parkingLocations[idx]) return;
+  const loc = window._parkingLocations[idx];
+  const tabContent = document.getElementById('parking-tab-content');
+  if (!tabContent) return;
+  tabContent.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div><span style="font-family:var(--body);font-size:0.78rem;color:var(--muted)">Ricerca parcheggi…</span></div>';
+  const result = await fetchParkingData(loc.name, loc.lat, loc.lon);
+  tabContent.innerHTML = result;
+}
+
+async function fetchParkingData(cityName, lat, lon) {
+  const card = document.getElementById('card-parking');
+  const content = document.getElementById('parking-content');
+  card.style.display = 'block';
+
+  // 1. Overpass: cerca parcheggi con ricarica EV entro 2km dalla destinazione
+  const overpassQuery = `
+    [out:json][timeout:15];
+    (
+      node["amenity"="parking"]["motorcar"!="no"](around:2000,${lat},${lon});
+      way["amenity"="parking"]["motorcar"!="no"](around:2000,${lat},${lon});
+      node["amenity"="parking_entrance"](around:2000,${lat},${lon});
+    );
+    out body center 20;
+  `;
+
+  let osmParking = [];
+  try {
+    const res = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST', body: 'data=' + encodeURIComponent(overpassQuery)
+    });
+    const data = await res.json();
+    osmParking = (data.elements || [])
+      .filter(el => el.tags?.name || el.tags?.['parking:fee'] || el.tags?.fee)
+      .map(el => {
+        const t = el.tags || {};
+        const fee = t.fee || t['parking:fee'] || t['charge'] || '';
+        const feeClass = fee === 'no' || fee === 'free' ? 'fee-free'
+          : fee === 'yes' || fee === 'interval' || fee === 'hourly' ? 'fee-paid'
+          : 'fee-unknown';
+        const feeLabel = fee === 'no' || fee === 'free' ? '✓ Gratuito'
+          : fee === 'yes' ? '€ A pagamento'
+          : fee === 'interval' ? '€ Tariffa oraria'
+          : fee ? '€ ' + fee : '? Tariffa non specificata';
+        const elLat = el.lat || el.center?.lat;
+        const elLon = el.lon || el.center?.lon;
+        const distM = elLat ? Math.round(haversine({lat,lon},{lat:elLat,lon:elLon})*1000) : null;
+        const hasEV = t['motorcar:conditional'] || t['charging_station'] || t['ev_charging'] || false;
+        return {
+          name: t.name || t['addr:street'] || 'Parcheggio',
+          fee, feeClass, feeLabel,
+          capacity: t.capacity || '',
+          access: t.access || '',
+          distM, hasEV,
+          openHours: t.opening_hours || '',
+        };
+      })
+      .filter(p => p.distM !== null && p.distM <= 2000)
+      .sort((a,b) => a.distM - b.distM)
+      .slice(0, 6);
+  } catch(e) { console.warn('Overpass parking error:', e); }
+
+  // 2. Politiche locali EV — database città principali
+  const EV_POLICIES = {
+    // ── ITALIA ──
+    'Roma':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV accedono gratuitamente alle ZTL del centro storico. ParkingRoma: 50% sconto per EV. Strisce blu soggette a pagamento ordinario.'},
+    'Milano':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Accesso gratuito Area C per EV puri. Parcheggi ATM: tariffa ridotta. Strisce blu non esentate. Accesso Area B con deroghe.'},
+    'Milan':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Accesso gratuito Area C per EV puri. Parcheggi ATM: tariffa ridotta. Strisce blu non esentate. Accesso Area B con deroghe.'},
+    'Firenze':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV accedono ZTL con pass gratuito per residenti. Parcheggi comunali: tariffa agevolata. Strisce blu soggette a pagamento.'},
+    'Napoli':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna esenzione generalizzata per EV. ZTL Tarsia accessibile con permesso speciale. Verificare aggiornamenti sul sito del Comune.'},
+    'Torino':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV accedono ZTL con permesso gratuito. Parcheggi GTT: sconto per veicoli a basse emissioni. Alcune strisce blu esentate in zone pilota.'},
+    'Bologna':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Accesso agevolato ZTL per EV puri. Parcheggi Saba: tariffe ridotte. Programma incentivi mobilità elettrica attivo.'},
+    'Venezia':{'free':'✅ Sì','ztl':'N/A','note':'Parcheggio Fusina gratuito per EV. Centro storico pedonale. Agevolazioni per traghetti con EV. Verificare stagionalità.'},
+    'Genova':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Parcheggi AMT senza esenzioni specifiche EV. Accesso ZTL con permesso a pagamento. Alcune colonnine gratuite in parcheggi convenzionati.'},
+    'Palermo':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna politica strutturata per EV sui parcheggi. ZTL accessibile con pass. Verificare aggiornamenti Comune.'},
+    'Bari':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna esenzione generalizzata. Alcune aree con colonnine gratuite. Verificare regolamento comunale aggiornato.'},
+    'Catania':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Politiche EV in fase di definizione. Alcune colonnine gratuite in parcheggi pubblici. Verificare sito comunale.'},
+    'Cagliari':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna esenzione strutturata per EV. ZTL con permesso. Verificare aggiornamenti del Comune.'},
+    'Verona':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV esentati dall’Area di Sosta a Tariffa differenziata in alcune zone. Accesso ZTL facilitato. Parcheggi AMV: tariffe ridotte.'},
+    'Padova':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con accesso agevolato ZTL. Parcheggi APS con tariffe ridotte. Progetto Smart Parking attivo.'},
+    'Trieste':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV accedono ZTL con permesso gratuito. Alcuni parcheggi comunali con tariffa ridotta. Programma espansione colonnine in corso.'},
+    'Bergamo':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Accesso ZTL Città Alta agevolato per EV. Parcheggi ATB con tariffe differenziate. Verificare regolamento stagionale.'},
+    'Brescia':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con agevolazioni nei parcheggi comunali. Accesso ZTL con pass specifico. Progetto mobilità sostenibile in espansione.'},
+    'Modena':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Esenzioni parziali per EV in alcune zone a pagamento. ZTL accessibile con permesso gratuito per EV.'},
+    'Parma':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con accesso ZTL facilitato. Sosta agevolata in alcune aree. Programma incentivi comunali attivo.'},
+    'Reggio Emilia':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Politiche favorevoli per EV con tariffe agevolate nei parcheggi comunali. ZTL accessibile.'},
+    'Perugia':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con accesso agevolato ZTL. Parcheggi comunali con tariffe ridotte per veicoli a basse emissioni.'},
+    'Ancona':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna esenzione strutturata. ZTL con permesso. Verificare sito del Comune per aggiornamenti.'},
+    'Pescara':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Politiche EV in sviluppo. Alcune colonnine gratuite. Verificare regolamento comunale.'},
+    'Taranto':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna esenzione specifica per EV. Verificare eventuali aggiornamenti del Comune.'},
+    'Reggio Calabria':{'free':'❌ No','ztl':'❌ No','note':'Nessuna politica EV strutturata attualmente. Verificare sito del Comune.'},
+    'Messina':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Politiche EV in corso di definizione. Verificare aggiornamenti comunali.'},
+    'Salerno':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna esenzione strutturata per EV. ZTL con permesso ordinario.'},
+    'Foggia':{'free':'❌ No','ztl':'❌ No','note':'Nessuna politica EV attiva al momento. Verificare sito del Comune.'},
+    'Rimini':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con accesso facilitato ZTL. Parcheggi estivi con tariffe agevolate. Colonnine gratuite in alcune strutture.'},
+    'Ravenna':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV accedono ZTL con permesso gratuito. Parcheggi comunali con tariffe ridotte.'},
+    'Ferrara':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con accesso ZTL agevolato. Città ciclabile: molte aree pedonali. Tariffe ridotte nei parcheggi comunali.'},
+    'Pisa':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV accedono ZTL con pass. Parcheggi vicino Piazza Miracoli con tariffe agevolate per EV.'},
+    'Livorno':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna esenzione strutturata. ZTL con permesso. Alcune colonnine gratuite in parcheggi pubblici.'},
+    'Siena':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con accesso facilitato ZTL centro storico. Parcheggi Siena Parcheggi con tariffe agevolate.'},
+    'Lucca':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con pass gratuito per ZTL. Parcheggi fuori mura con tariffe agevolate. Centro pedonale.'},
+    'Trento':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con accesso ZTL facilitato. Parcheggi Trentino Mobilità con tariffe ridotte. Programma Smart Mobility attivo.'},
+    'Bolzano':{'free':'✅ Sì','ztl':'✅ Sì','note':'Alto Adige: politiche molto favorevoli per EV. Parcheggi comunali gratuiti in alcune zone. ZTL accessibile liberamente. Rete ricarica capillare.'},
+    'Aosta':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Valle d’Aosta: incentivi regionali per EV. Parcheggi con tariffe agevolate. ZTL con accesso facilitato.'},
+    'Udine':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con accesso ZTL agevolato. Parcheggi AMTU con tariffe ridotte per veicoli a basse emissioni.'},
+    'Vicenza':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con pass ZTL gratuito. Parcheggi comunali con tariffe differenziate. Progetto e-mobility attivo.'},
+    'Treviso':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con accesso ZTL facilitato. Parcheggi con tariffe agevolate. Buona rete di ricarica pubblica.'},
+    // ── FRANCIA ──
+    'Paris':{'free':'✅ Sì','ztl':'✅ Sì','note':'Parking gratuit pour EV dans les parkings municipaux Paris Stationnement. Accès ZFE sans restriction. Recharge gratuite dans certains P+R.'},
+    'Lyon':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Tarifs réduits dans les parkings Effia pour EV. Accès ZFE facilité. Bornes de recharge gratuites dans certains parcs.'},
+    'Marseille':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Véhicules électriques avec tarifs réduits dans certains parkings. Accès ZFE sans vignette requise. Réseau de recharge en expansion.'},
+    'Toulouse':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV avec tarifs préférentiels dans les parkings Toulouse Métropole. ZFE accessible. Bornes gratuites dans P+R.'},
+    'Nice':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Parkings municipaux avec tarifs réduits pour EV. Accès zones piétonnes facilité. Bon réseau de recharge côte d’Azur.'},
+    'Bordeaux':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV avec avantages dans parkings Bordeaux Métropole. ZFE accesssible. Programme mobilité verte actif.'},
+    'Strasbourg':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Parkings CTS avec tarifs réduits pour EV. ZFE sans restriction. Réseau de tramway et recharge bien développé.'},
+    'Nantes':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV avec tarifs préférentiels dans parkings Nantes Métropole. ZFE accessible librement. Infrastructure de recharge en croissance.'},
+    'Montpellier':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Parkings TaM avec avantages pour EV. Zone ZFE sans restriction. Recharge gratuite dans certains P+R.'},
+    'Rennes':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV avec tarifs réduits dans parkings Star/Effia. ZFE librement accessible. Bornes gratuites dans métropole.'},
+    // ── SPAGNA ──
+    'Barcelona':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con tarifa reducida en aparcamientos B:SM. Acceso gratuito ZBE. Carga gratuita en puntos municipales. Etiqueta CERO obligatoria.'},
+    'Madrid':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EMT con tarifa reducida para EV. Acceso libre Madrid Central y Distrito Centro. Etiqueta CERO obligatoria para zonas restringidas.'},
+    'Valencia':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EMT Valencia: tarifa reducida para EV. Acceso ZBE facilitado. Puntos de carga gratuitos en aparcamientos municipales.'},
+    'Seville':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'TUSSAM con ventajas para EV. Zona Sevilla Centro accesible. Red de carga en expansión.'},
+    'Sevilla':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'TUSSAM con ventajas para EV. Zona Sevilla Centro accesible. Red de carga en expansión.'},
+    'Bilbao':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Aparcamientos municipales con tarifas reducidas para EV. ZBE acceso libre. Infraestructura de carga en crecimiento.'},
+    'Zaragoza':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV con descuentos en aparcamientos municipales. Acceso ZBE sin restricciones. Puntos de carga gratuitos disponibles.'},
+    'Málaga':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Aparcamientos EMT con tarifa reducida. ZBE accesible para EV. Red de recarga en desarrollo.'},
+    'Palma':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Baleares con incentivos para EV. Aparcamientos municipales con tarifa reducida. ZBE accesible.'},
+    // ── GERMANIA ──
+    'Berlin':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'E-Fahrzeuge mit Sonderrechten in Umweltzonen. Einige Parkhäuser bieten kostenlose Ladung. Berliner Parkausweis für E-Fahrzeuge möglich.'},
+    'München':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Parkhäuser der Stadt München mit Rabatten für EV. Zufahrt Umweltzone ohne Einschränkungen. Kostenlose Ladestationen in einigen Tiefgaragen.'},
+    'Munich':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'City car parks with EV discounts. Free access to environmental zones. Free charging in some underground car parks.'},
+    'Hamburg':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Hamburger Parkhäuser mit EV-Rabatten. Umweltzone frei zugänglich. Kostenloses Laden in Park & Ride-Anlagen. Gut ausgebautes Ladenetz.'},
+    'Frankfurt':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'ABG Parkhäuser mit EV-Vergünstigungen. Umweltzone ohne Einschränkungen. Gratis Laden in einigen städtischen Garagen.'},
+    'Köln':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'KölnParken mit Rabatten für E-Fahrzeuge. Umweltzone frei. Gutes Ladenetz im Stadtgebiet.'},
+    'Cologne':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'City parking with EV discounts. Free access to environmental zones. Good charging network.'},
+    'Düsseldorf':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Rheinbahn-Parkhäuser mit EV-Rabatten. Umweltzone frei zugänglich. Ladenetz wird ausgebaut.'},
+    'Stuttgart':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'SSB-Parkhäuser mit Vergünstigungen für EV. Umweltzone nur für EV frei zugänglich (Feinstaub-Alarm-Regelungen). Kostenlose Ladestationen verfügbar.'},
+    'Leipzig':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Kommunale Parkhäuser mit EV-Rabatten. Umweltzone ohne Einschränkungen. Ladenetz in Expansion.'},
+    'Dresden':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'DVB Parkhäuser mit EV-Vergünstigungen. Umweltzone frei. Gutes Ladenetz in der Innenstadt.'},
+    'Nuremberg':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'VAG Parkhäuser mit Rabatten für E-Fahrzeuge. Umweltzone frei zugänglich. Ladenetz wächst stetig.'},
+    'Nürnberg':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'VAG Parkhäuser mit Rabatten für E-Fahrzeuge. Umweltzone frei zugänglich. Ladenetz wächst stetig.'},
+    'Bremen':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'BSAG Parkhäuser mit EV-Vergünstigungen. Umweltzone ohne Einschränkungen. Kostenlose Ladestationen in P+R.'},
+    'Hannover':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'üstra Parkhäuser mit EV-Rabatten. Umweltzone frei zugänglich. Gut ausgebautes Ladenetz.'},
+    'Freiburg':{'free':'✅ Sì','ztl':'✅ Sì','note':'Freiburg: città verde modello. Parcheggi municipali gratuiti per EV in alcune zone. ZTL accessibile. Ottima infrastruttura ciclabile e di ricarica.'},
+    // ── AUSTRIA ──
+    'Vienna':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Elektrofahrzeuge mit reduzierten Parkgebühren in Wiener Stadtgaragen. Zufahrt zur Umweltzone frei. Gratis Laden in Park & Ride-Anlagen.'},
+    'Wien':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Elektrofahrzeuge mit reduzierten Parkgebühren in Wiener Stadtgaragen. Zufahrt zur Umweltzone frei. Gratis Laden in Park & Ride-Anlagen.'},
+    'Graz':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Grazer Parkhäuser mit EV-Vergünstigungen. Umweltzone frei. Gutes Ladenetz in der Innenstadt. Förderungen für E-Mobilität.'},
+    'Salzburg':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Stadtbusparkgaragen mit EV-Rabatten. Zufahrt Innenstadtzone erleichtert. Ladenetz in Expansion.'},
+    'Innsbruck':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'IVB Parkhäuser mit EV-Vergünstigungen. Umweltzone frei zugänglich. Tirol fördert E-Mobilität aktiv.'},
+    // ── SVIZZERA ──
+    'Zürich':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Elektrofahrzeuge in Zürich mit Vergünstigungen in städtischen Parkhäusern. Keine Umweltzonen-Beschränkungen. Ladenetz gut ausgebaut.'},
+    'Zurich':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV with discounts in city car parks. No environmental zone restrictions. Well-developed charging network.'},
+    'Geneva':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Parkings municipaux genevois avec tarifs réduits pour EV. Zone piétonne accessible. Infrastructure de recharge excellente.'},
+    'Genève':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Parkings municipaux genevois avec tarifs réduits pour EV. Zone piétonne accessible. Infrastructure de recharge excellente.'},
+    'Basel':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Basler Parkhäuser mit EV-Vergünstigungen. Umweltzone frei zugänglich. Sehr gutes grenzüberschreitendes Ladenetz (D-F-CH).'},
+    'Bern':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Bernmobil Parkhäuser mit EV-Rabatten. Umweltzone frei. Gut ausgebautes Ladenetz in der Bundeshauptstadt.'},
+    'Lausanne':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Parkings TL avec tarifs réduits pour EV. Accès zones piétonnes facilité. Bon réseau de recharge.'},
+    // ── PAESI BASSI ──
+    'Amsterdam':{'free':'✅ Sì','ztl':'✅ Sì','note':'Gratis parkeren voor EV op veel gemeentelijke parkeerplaatsen. Vrije toegang tot milieuzones. Uitgebreid laadnetwerk. Centrum autoluw.'},
+    'Rotterdam':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'RET parkeergarages met kortingen voor EV. Milieuzone vrij toegankelijk. Groot laadnetwerk in de haven-stad.'},
+    'The Hague':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Haagse parkeergarages met EV-kortingen. Milieuzone vrij. Goed laadnetwerk in regeringsstad.'},
+    'Utrecht':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'U-OV parkeergarages met kortingen voor EV. Milieuzone vrij toegankelijk. Excellent laadnetwerk.'},
+    'Eindhoven':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Gemeentelijke parkeergarages met EV-voordelen. Milieuzone vrij. Philips-stad met goed laadnetwerk.'},
+    // ── BELGIO ──
+    'Brussels':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Voitures électriques avec tarifs réduits dans les parkings Interparking. Accès LEZ sans restriction. Chargeurs gratuits dans certains P+R.'},
+    'Bruxelles':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Voitures électriques avec tarifs réduits dans les parkings Interparking. Accès LEZ sans restriction. Chargeurs gratuits dans certains P+R.'},
+    'Antwerp':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Stad Antwerpen parkeergarages met EV-kortingen. LEZ vrij toegankelijk voor EV. Goed laadnetwerk in diamantstad.'},
+    'Antwerpen':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Stad Antwerpen parkeergarages met EV-kortingen. LEZ vrij toegankelijk voor EV. Goed laadnetwerk in diamantstad.'},
+    'Ghent':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Gent parkeergarages met EV-voordelen. Circulatieplan vriendelijk voor EV. Goed laadnetwerk.'},
+    'Gent':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Gent parkeergarages met EV-voordelen. Circulatieplan vriendelijk voor EV. Goed laadnetwerk.'},
+    // ── UK ──
+    'London':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'EV exempt from Congestion Charge and ULEZ. Some councils offer free parking. Blue Badge holders with EVs get additional benefits. Check local borough rules.'},
+    'Manchester':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'TfGM car parks with EV discounts. Clean Air Zone accessible for EV. Growing charging network. Council EV incentives available.'},
+    'Edinburgh':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Edinburgh City car parks with EV discounts. LEZ accessible for EV. Good charging infrastructure in Scottish capital.'},
+    'Birmingham':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'NCP car parks with EV discounts. Clean Air Zone accessible. Charging network expanding rapidly.'},
+    'Bristol':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Bristol Parking with EV discounts. Clean Air Zone accessible. Green city with good charging infrastructure.'},
+    'Glasgow':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Council car parks with EV discounts. LEZ accessible. Charging network growing across the city.'},
+    // ── PORTOGALLO ──
+    'Lisbon':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Veículos elétricos com tarifa reduzida nos parques EMEL. Acesso livre à ZULE. Carregamento gratuito em alguns parques municipais.'},
+    'Lisboa':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Veículos elétricos com tarifa reduzida nos parques EMEL. Acesso livre à ZULE. Carregamento gratuito em alguns parques municipais.'},
+    'Porto':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'STCP parques com tarifas reduzidas para EV. Zona histórica acessível. Boa rede de carregamento no norte de Portugal.'},
+    // ── SCANDINAVIA ──
+    'Oslo':{'free':'✅ Sì','ztl':'✅ Sì','note':'Norvegia leader mondiale EV. Parcheggi gratuiti per EV in molte strutture pubbliche. ZTL accessibile. Ricarica gratuita in molti parcheggi. Pedaggi ridotti del 50%.'},
+    'Stockholm':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Svezia: parcheggi municipali con tariffe ridotte per EV. ZTL accessibile. Congestion tax ridotta per EV. Ottima rete di ricarica.'},
+    'Copenhagen':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Danimarca: parcheggi pubblici con tariffe agevolate per EV. ZTL accessibile. Rete di ricarica capillare. Incentivi comunali attivi.'},
+    'Helsinki':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Finlandia: parcheggi HSL con tariffe ridotte per EV. ZTL accessibile. Rete di ricarica in espansione. Incentivi governativi.'},
+    'Gothenburg':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Göteborg: parcheggi Västtrafik con sconti per EV. Congestion tax ridotta. Rete di ricarica in crescita.'},
+    // ── EUROPA CENTRALE/EST ──
+    'Prague':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna esenzione strutturata per EV sui parcheggi. ZTL con permesso. Rete di ricarica in espansione nella capitale ceca.'},
+    'Warsaw':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna politica EV strutturata sui parcheggi. ZTL con permesso. Polonia sta sviluppando infrastrutture EV.'},
+    'Budapest':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna esenzione generalizzata per EV. ZTL con permesso. Rete di ricarica in sviluppo nella capitale ungherese.'},
+    'Vienna':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Wiener Stadtgaragen con Vergünstigungen per EV. Umweltzone libera. Ricarica gratuita in Park & Ride.'},
+    'Bratislava':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Politiche EV in sviluppo. Alcune colonnine gratuite in centro. Verificare regolamento comunale.'},
+    'Ljubljana':{'free':'⚠️ Parziale','ztl':'✅ Sì','note':'Centro completamente chiuso al traffico. EV con accesso facilitato. Parcheggi Petrol con tariffe agevolate. Slovenia molto green-friendly.'},
+    'Zagreb':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Nessuna esenzione strutturata per EV. ZTL con permesso. Infrastruttura di ricarica in espansione.'},
+    'Bucharest':{'free':'❌ No','ztl':'❌ No','note':'Politiche EV ancora limitate. Nessuna ZTL con accesso EV facilitato. Rete di ricarica in sviluppo.'},
+    'Sofia':{'free':'❌ No','ztl':'❌ No','note':'Politiche EV in fase iniziale. Verificare il sito del Comune per eventuali aggiornamenti.'},
+    'Athens':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Atene: alcune agevolazioni per EV in ZTL. Nessuna esenzione strutturata sui parcheggi. Rete di ricarica in espansione.'},
+    'Atene':{'free':'❌ No','ztl':'⚠️ Parziale','note':'Atene: alcune agevolazioni per EV in ZTL. Nessuna esenzione strutturata sui parcheggi. Rete di ricarica in espansione.'},
+  };
+
+  let policyHTML = '';
+  // Match city name (case-insensitive, partial match)
+  const cityKey = Object.keys(EV_POLICIES).find(k =>
+    cityName.toLowerCase().includes(k.toLowerCase()) ||
+    k.toLowerCase().includes(cityName.toLowerCase().split(',')[0])
+  );
+  const policy = cityKey ? EV_POLICIES[cityKey] : null;
+
+  if (policy) {
+    policyHTML = `<div class="policy-box">
+      <span class="policy-title">📋 Politiche parcheggio EV — ${cityKey}</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.7rem">
+        <div style="background:var(--card);border-radius:8px;padding:0.6rem;text-align:center">
+          <div style="font-family:var(--heading);font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:0.2rem">Parcheggio gratuito</div>
+          <div style="font-size:1rem">${policy.free}</div>
+        </div>
+        <div style="background:var(--card);border-radius:8px;padding:0.6rem;text-align:center">
+          <div style="font-family:var(--heading);font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:0.2rem">Accesso ZTL/ZFE</div>
+          <div style="font-size:1rem">${policy.ztl}</div>
+        </div>
+      </div>
+      <p style="font-size:0.82rem;line-height:1.7;color:var(--text)">${policy.note}</p>
+      <p style="font-family:var(--mono);font-size:0.6rem;color:var(--muted);margin-top:0.6rem">⚠️ Informazioni indicative — verifica sempre sul sito del Comune prima del viaggio</p>
+    </div>`;
+  } else {
+    policyHTML = `<div class="policy-box">
+      <span class="policy-title">📋 Politiche parcheggio EV — ${cityName}</span>
+      <p style="font-size:0.82rem;line-height:1.7;color:var(--text)">
+        Non abbiamo dati specifici per questa città nel nostro database. 
+        Ti consigliamo di verificare sul sito del Comune o su 
+        <strong style="color:var(--accent)">plugshare.com</strong> per informazioni 
+        aggiornate sulle politiche di sosta per veicoli elettrici.
+      </p>
+    </div>`;
+  }
+
+  // 3. Render
+  let html = policyHTML;
+
+  if (osmParking.length) {
+    html += `<div style="font-family:var(--heading);font-size:0.65rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:0.6rem">📍 Parcheggi nelle vicinanze (entro 2km)</div>`;
+    html += osmParking.map(p => `
+      <div class="parking-item">
+        <div class="parking-icon">${p.hasEV ? '⚡' : '🅿️'}</div>
+        <div>
+          <div class="parking-name">${p.name}</div>
+          <div class="parking-detail">
+            ${p.distM ? `~${p.distM}m dal centro` : ''}
+            ${p.capacity ? ` · ${p.capacity} posti` : ''}
+            ${p.openHours ? ` · ${p.openHours}` : ''}
+          </div>
+          <span class="parking-fee ${p.feeClass}">${p.feeLabel}</span>
+        </div>
+      </div>`).join('');
+  } else {
+    html += `<div style="font-size:0.82rem;color:var(--muted);padding:0.5rem">Nessun dato parcheggio disponibile su OpenStreetMap per questa area.</div>`;
+  }
+
+  content.innerHTML = html;
+
+}
+
+// ── SEND TO TESLA ──
+function sendToTesla(lat, lon, name, btn) {
+  // Deep link Tesla — su iOS apre l'app Tesla direttamente se installata
+  const teslaDeepLink = 'tesla://navigation?lat=' + lat + '&lon=' + lon + '&name=' + encodeURIComponent(name);
+
+  // window.location.href funziona su iOS Safari (l'iframe no)
+  window.location.href = teslaDeepLink;
+
+  // Feedback visivo sul bottone
+  if (btn) {
+    const origHTML = btn.innerHTML;
+    const origBg   = btn.style.background;
+    const origCol  = btn.style.color;
+    btn.innerHTML = '✅ Inviato!';
+    btn.style.background = 'var(--accent2)';
+    btn.style.color = 'var(--bg)';
+    btn.disabled = true;
+    setTimeout(function() {
+      btn.innerHTML = origHTML;
+      btn.style.background = origBg;
+      btn.style.color = origCol;
+      btn.disabled = false;
+    }, 2500);
+  }
+}
+
+
+// ── SCROLL TO TOP ──
+(function() {
+  var btn = document.getElementById('btn-scroll-top');
+  if (!btn) return;
+  window.addEventListener('scroll', function() {
+    if (window.scrollY > 300) {
+      btn.classList.add('visible');
+    } else {
+      btn.classList.remove('visible');
+    }
+  }, { passive: true });
+})();
+
+// ── SW ──
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(e=>console.log('SW:',e)));
+}
+</script>
+</body>
+</html>
