@@ -1226,7 +1226,7 @@ function setupAC(inputId, ddId) {
               'X-Goog-Api-Key': 'AIzaSyDSc-MKc4JmEhNeTcLfEcEtzSd1Cdvky2Y',
               'X-Goog-FieldMask': 'location,displayName'
             }
-          }).then(function(r) { return r.ok ? r.json() : null; })
+          }).then(function(r) { if(!r.ok){console.error('Google Places error:',r.status,r.statusText);} return r.ok ? r.json() : null; })
             .then(function(d) {
               if (d && d.location) {
                 selected = { lat: d.location.latitude, lon: d.location.longitude, name: name };
@@ -1319,6 +1319,7 @@ function setupAC(inputId, ddId) {
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(d) {
         if (q !== currentQuery) return;
+        if (d && d.error) { console.error('Google Places API error:', d.error); }
         var suggestions = (d && d.suggestions) ? d.suggestions : [];
         if (suggestions.length > 0) {
           var googleFeatures = suggestions
@@ -1336,9 +1337,9 @@ function setupAC(inputId, ddId) {
           dd.classList.add('open');
         }
       })
-      .catch(function() {
-        if (q === currentQuery && local.length === 0) {
-          dd.innerHTML = '<div class="ac-item" style="color:var(--muted)">Servizio non disponibile</div>';
+      .catch(function(err) {
+        if (q === currentQuery) {
+          dd.innerHTML = '<div class="ac-item" style="color:var(--tesla)">⚠️ Google non disponibile — verifica la API key</div>';
           dd.classList.add('open');
         }
       });
